@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="3.0" xmlns="https://jakarta.ee/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd">
+  <!-- Define Persistence Unit -->
+  <persistence-unit name="my_persistence_unit">
+    <class>com.qd.pojo.Roles</class>
+    <class>com.qd.pojo.Providers</class>
+    <class>com.qd.pojo.Users</class>
+    <class>com.qd.pojo.TourItemConcs</class>
+    <class>com.qd.pojo.Orders</class>
+    <class>com.qd.pojo.Carts</class>
+    <class>com.qd.pojo.Services</class>
+    <class>com.qd.pojo.ChatMessages</class>
+    <class>com.qd.pojo.HotelRoomItems</class>
+    <class>com.qd.pojo.ServiceImages</class>
+    <class>com.qd.pojo.TourDetails</class>
+    <class>com.qd.pojo.ProviderOrders</class>
+    <class>com.qd.pojo.CartItems</class>
+    <class>com.qd.pojo.SellableItems</class>
+    <class>com.qd.pojo.TransportTicketItems</class>
+    <class>com.qd.pojo.TransportDetails</class>
+    <class>com.qd.pojo.PaymentMethods</class>
+    <class>com.qd.pojo.Reviews</class>
+    <class>com.qd.pojo.HotelDetails</class>
+    <class>com.qd.pojo.Favorites</class>
+    <class>com.qd.pojo.Categories</class>
+    <class>com.qd.pojo.OrderDetails</class>
+  </persistence-unit>
+</persistence>
