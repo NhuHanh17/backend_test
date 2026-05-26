@@ -12,43 +12,42 @@ import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatche
  *
  * @author ADMIN
  */
-public class DispatcherServletInit extends AbstractAnnotationConfigDispatcherServletInitializer{
+public class DispatcherServletInit extends AbstractAnnotationConfigDispatcherServletInitializer {
 
     @Override
     protected Class<?>[] getRootConfigClasses() {
-        return new Class[]{
-            ThymeleafConfigs.class,
-            HibernateConfigs.class,
-            WebSecurityConfig.class,
-            JwtAuthenticationFilter.class
-           
+        return new Class[] {
+                ThymeleafConfigs.class,
+                HibernateConfigs.class,
+                WebSecurityConfig.class,
+                JwtAuthenticationFilter.class
+
         };
     }
 
     @Override
     protected Class<?>[] getServletConfigClasses() {
-        return new Class[]{
-            WebAppContextConfigs.class
+        return new Class[] {
+                WebAppContextConfigs.class
         };
     }
 
     @Override
     protected String[] getServletMappings() {
-        return new String[]{"/"};
+        return new String[] { "/" };
     }
 
     @Override
     protected void customizeRegistration(ServletRegistration.Dynamic registration) {
-        registration.setMultipartConfig(new MultipartConfigElement("D:/temp",5000000 , 15000000, 0));
+        registration.setMultipartConfig(new MultipartConfigElement("/tmp", 5000000, 15000000, 0));
     }
-    
+
     @Override
     protected jakarta.servlet.Filter[] getServletFilters() {
-        org.springframework.web.filter.CharacterEncodingFilter encodingFilter
-                = new org.springframework.web.filter.CharacterEncodingFilter();
+        org.springframework.web.filter.CharacterEncodingFilter encodingFilter = new org.springframework.web.filter.CharacterEncodingFilter();
         encodingFilter.setEncoding("UTF-8");
         encodingFilter.setForceEncoding(true);
-        return new jakarta.servlet.Filter[]{encodingFilter};
+        return new jakarta.servlet.Filter[] { encodingFilter };
     }
 
 }
