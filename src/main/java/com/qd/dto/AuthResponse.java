@@ -25,6 +25,7 @@ public class AuthResponse {
     private String phone;
     private String avatarUrl; 
     private String roleName;
+    private String address;
     private Date createdAt;
 
     private AuthResponse(Builder builder) {
@@ -39,6 +40,7 @@ public class AuthResponse {
         this.avatarUrl = builder.avatarUrl;
         this.roleName = builder.roleName;
         this.createdAt = builder.createdAt;
+        this.address = builder.address;
     }
 
     public boolean isSuccess() { return success; }
@@ -52,6 +54,7 @@ public class AuthResponse {
     public String getAvatarUrl() { return avatarUrl; }
     public String getRoleName() { return roleName; }
     public Date getCreatedAt() { return createdAt; }
+    public String getAddress() { return address; }
 
     public static class Builder {
         private boolean success;
@@ -65,6 +68,7 @@ public class AuthResponse {
         private String avatarUrl;
         private String roleName;
         private Date createdAt;
+        private String address;
 
         public Builder success(boolean success) { this.success = success; return this; }
         public Builder message(String message) { this.message = message; return this; }
@@ -79,6 +83,7 @@ public class AuthResponse {
                 this.phone = user.getPhone();
                 this.avatarUrl = user.getAvatarUrl();
                 this.createdAt = user.getCreatedAt();
+                this.address = user.getAddress();
                 if (user.getRoleId() != null) {
                     this.roleName = user.getRoleId().getRoleName();
                 }

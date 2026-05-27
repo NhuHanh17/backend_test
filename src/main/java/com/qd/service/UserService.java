@@ -4,9 +4,11 @@
  */
 package com.qd.service;
 
+import com.qd.dto.AdminActionRequest;
 import com.qd.dto.AuthResponse;
 import com.qd.dto.RegisterRequest;
 import com.qd.dto.UserProfile;
+import java.util.Map;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -18,5 +20,10 @@ public interface UserService {
     AuthResponse login(String username,String password);
     UserProfile getUserProfile(String username);
     String updateUserAvatar(String username, MultipartFile file);
-
+    AuthResponse updateUserProfile(String username, UserProfile req);
+    AuthResponse changePassword(String username, com.qd.dto.ChangePasswordRequest req);
+    Map getAdminProvidersList(boolean isApproved, java.util.Map<String, String> params);
+    AuthResponse approveProvider(Long id);
+    AuthResponse rejectProvider(Long id, AdminActionRequest req);
+    AuthResponse banProvider(Long id, AdminActionRequest req);
 }

@@ -5,6 +5,9 @@
 package com.qd.repository;
 
 import com.qd.pojo.Providers;
+import java.util.List;
+import java.util.Map;
+
 
 /**
  *
@@ -13,5 +16,11 @@ import com.qd.pojo.Providers;
 public interface ProviderRepository {
     boolean isExistsByCompanyName(String companyName);
     boolean isExistsByTaxCode(String taxCode);
+    boolean isExistsByHotline(String hotline);
+    List<Providers>getProviders(Map<String,String>params);
+    List<Providers> getProvidersByStatus(boolean isApproved, Map<String, String> params);
     void save(Providers provider);
+    Long countProvidersByStatus(boolean isApproved,Map<String, String> params);
+    Providers getProviderWithUserById(Long id);
+    void updateProvider(Providers provider);
 }

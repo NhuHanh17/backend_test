@@ -18,4 +18,7 @@ public interface UserRepository {
     boolean isExistByEmail(String email);
     boolean isExistByPhone(String phone);
     void save(Users user);
+    boolean isEmailExistForOthers(String email, Long currentUserId);
+    boolean isPhoneExistForOthers(String phone, Long currentUserId);
+    
 }

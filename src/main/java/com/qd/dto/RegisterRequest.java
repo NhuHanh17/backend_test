@@ -96,7 +96,7 @@ public class RegisterRequest {
         public Builder email(String email) { this.email = email; return this; }
         public Builder phone(String phone) { this.phone = phone; return this; }
         public Builder avatar(MultipartFile avatar) { this.avatar = avatar; return this; }
-        public Builder roleType(String roleType) { this.roleType = roleType; return this; } // 🎯 Đã vá hàm .roleType() nhen!
+        public Builder roleType(String roleType) { this.roleType = roleType; return this; } 
         // Provider Builder Methods
         public Builder companyName(String companyName) { this.companyName = companyName; return this; }
         public Builder taxCode(String taxCode) { this.taxCode = taxCode; return this; }

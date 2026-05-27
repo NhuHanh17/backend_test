@@ -85,4 +85,22 @@ public class UserRepositoryImpl implements UserRepository {
                 .uniqueResult();
         return user != null;
     }
+
+    @Override
+    public boolean isEmailExistForOthers(String email, Long currentUserId) {
+        Users user = getSession()
+                .createNamedQuery("Users.findByEmail", Users.class)
+                .setParameter("email", email)
+                .uniqueResult();
+        return user != null && !user.getId().equals(currentUserId);
+    }
+
+    @Override
+    public boolean isPhoneExistForOthers(String phone, Long currentUserId) {
+        Users user = getSession()
+                .createNamedQuery("Users.findByPhone", Users.class)
+                .setParameter("phone", phone)
+                .uniqueResult();
+        return user != null && !user.getId().equals(currentUserId);
+    }
 }

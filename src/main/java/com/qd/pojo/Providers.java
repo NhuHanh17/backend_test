@@ -80,6 +80,10 @@ public class Providers implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @OneToOne(optional = false)
     private Users userId;
+    
+    @Size(max = 255)
+    @Column(name = "status_reason")
+    private String statusReason;
 
     public Providers() {
     }
@@ -199,6 +203,20 @@ public class Providers implements Serializable {
     @Override
     public String toString() {
         return "com.qd.pojo.Providers[ id=" + id + " ]";
+    }
+
+    /**
+     * @return the statusReason
+     */
+    public String getStatusReason() {
+        return statusReason;
+    }
+
+    /**
+     * @param statusReason the statusReason to set
+     */
+    public void setStatusReason(String statusReason) {
+        this.statusReason = statusReason;
     }
     
 }
