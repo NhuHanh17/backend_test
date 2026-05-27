@@ -1,87 +1,70 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.qd.configs;
 
 import java.util.Properties;
 import javax.sql.DataSource;
-
+import static org.hibernate.cfg.JdbcSettings.DIALECT;
+import static org.hibernate.cfg.JdbcSettings.SHOW_SQL;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.hibernate5.HibernateTransactionManager;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 
+/**
+ *
+ * @author ADMIN
+ */
 @Configuration
-@PropertySource("classpath:application.properties")
+@PropertySource("classpath:databases.properties")
 @ComponentScan(basePackages = {
-        "com.qd.configs",
-        "com.qd.repository",
-        "com.qd.service",
-        "com.qd.utils"
+    "com.qd.configs",    
+    "com.qd.utils",    
+    "com.qd.repository", 
+    "com.qd.service"     
 })
 public class HibernateConfigs {
-
     @Autowired
     private Environment env;
-
-    @Bean
-    public DataSource dataSource() {
-
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-
-        dataSource.setDriverClassName(
-                env.getProperty("db.driver"));
-
-        dataSource.setUrl(
-                env.getProperty("db.url"));
-
-        dataSource.setUsername(
-                env.getProperty("db.username"));
-
-        dataSource.setPassword(
-                env.getProperty("db.password"));
-
-        return dataSource;
-    }
-
-    @Bean
+     @Bean
     public LocalSessionFactoryBean getSessionFactory() {
-
         LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
-
         sessionFactory.setDataSource(dataSource());
-
-        sessionFactory.setPackagesToScan(
-                "com.qd.pojo");
-
-        sessionFactory.setHibernateProperties(
-                hibernateProperties());
-
+        sessionFactory.setPackagesToScan(new String[]{"com.qd.pojo"});
+        sessionFactory.setHibernateProperties(hibernateProperties());
         return sessionFactory;
     }
 
+    @Bean
+    public DataSource dataSource() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName(env.getProperty("hibernate.connection.driverClass"));
+        dataSource.setUrl(env.getProperty("hibernate.connection.url"));
+        dataSource.setUsername(env.getProperty("hibernate.connection.username"));
+        dataSource.setPassword(env.getProperty("hibernate.connection.password"));
+        return dataSource;
+    }
+
     private Properties hibernateProperties() {
-
         Properties props = new Properties();
-
-        props.put(
-                "hibernate.dialect",
-                env.getProperty("hibernate.dialect"));
-
-        props.put(
-                "hibernate.show_sql",
-                env.getProperty("hibernate.show_sql"));
-
+        props.put(DIALECT, env.getProperty("hibernate.dialect"));
+        props.put(SHOW_SQL, env.getProperty("hibernate.showSql"));
         return props;
     }
-
+    
     @Bean
     public HibernateTransactionManager transactionManager() {
-
-        HibernateTransactionManager txManager = new HibernateTransactionManager();
-
-        txManager.setSessionFactory(
-                getSessionFactory().getObject());
-
-        return txManager;
+        HibernateTransactionManager transactionManager = new HibernateTransactionManager();
+        transactionManager.setSessionFactory(getSessionFactory().getObject());
+        return transactionManager;
     }
+
+   
 }

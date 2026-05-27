@@ -1,3 +1,7 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.qd.configs;
 
 import com.cloudinary.Cloudinary;
@@ -16,14 +20,20 @@ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerCo
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/**
+ *
+ * @author ADMIN
+ */
 @Configuration
-@ComponentScan(basePackages = {
-        "com.qd.configs",
-        "com.qd.controllers",
-        "com.qd.service",
-        "com.qd.repository",
-        "com.qd.utils"
-})
+@ComponentScan(
+        basePackages = {
+            "com.qd.configs",
+            "com.qd.controllers",
+            "com.qd.service",
+            "com.qd.repository",
+            "com.qd.utils"
+        }
+)
 @EnableWebMvc
 @EnableTransactionManagement
 public class WebAppContextConfigs implements WebMvcConfigurer {
@@ -39,15 +49,16 @@ public class WebAppContextConfigs implements WebMvcConfigurer {
 
     @Override
     public void configureDefaultServletHandling(DefaultServletHandlerConfigurer configurer) {
+        WebMvcConfigurer.super.configureDefaultServletHandling(configurer); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/OverriddenMethodBody
         configurer.enable();
     }
 
     @Override
-    public void configureMessageConverters(
-            List<org.springframework.http.converter.HttpMessageConverter<?>> converters) {
-
-        org.springframework.http.converter.json.MappingJackson2HttpMessageConverter jsonConverter = new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter();
-
+    public void configureMessageConverters(List<org.springframework.http.converter.HttpMessageConverter<?>> converters) {
+        // Kích hoạt JSON của Jackson
+        org.springframework.http.converter.json.MappingJackson2HttpMessageConverter jsonConverter
+                = new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter();
+        // ĐkýJackson vào Spring MVC
         converters.add(jsonConverter);
     }
 
@@ -74,12 +85,11 @@ public class WebAppContextConfigs implements WebMvcConfigurer {
 
     @Bean
     public io.swagger.v3.oas.models.OpenAPI customOpenAPI() {
-
         return new io.swagger.v3.oas.models.OpenAPI()
-                .info(
-                        new io.swagger.v3.oas.models.info.Info()
-                                .title("VISTA TRAVEL API DOCUMENTATION")
-                                .version("1.0")
-                                .description("Tài liệu hệ thống API đặt dịch vụ du lịch trực tuyến VistaDBV4"));
+                .info(new io.swagger.v3.oas.models.info.Info()
+                        .title("VISTA TRAVEL API DOCUMENTATION")
+                        .version("1.0")
+                        .description("Tài liệu hệ thống API đặt dịch vụ du lịch trực tuyến VistaDBV4"));
     }
+
 }

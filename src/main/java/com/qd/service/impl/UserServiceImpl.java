@@ -9,6 +9,7 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.qd.dto.AuthResponse;
 import com.qd.dto.RegisterRequest;
+import com.qd.dto.UserProfile;
 import com.qd.pojo.Providers;
 import com.qd.pojo.Roles;
 import com.qd.pojo.Users;
@@ -24,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  *
@@ -46,20 +48,94 @@ public class UserServiceImpl implements UserService{
     
     @Override
     @Transactional
+//    public AuthResponse register(RegisterRequest req) {
+//        //Check trùng lặp tài khoản và email trên hệ thống bảng Users
+//        if (userRepository.isExistByUsername(req.getUsername())) {
+//            return AuthResponse.builder().success(false).message("Tên tài khoản này đã tồn tại!").build();
+//        }
+//        if (userRepository.isExistByEmail(req.getEmail())) {
+//            return AuthResponse.builder().success(false).message("Email này đã được đăng ký rồi!").build();
+//        }
+//
+//        if (req.getAvatar() == null || req.getAvatar().isEmpty()) {
+//            return AuthResponse.builder().success(false).message("Ảnh đại diện là bắt buộc!").build();
+//        }
+//       
+//        Users user = new Users();
+//        user.setUsername(req.getUsername());
+//        user.setFullName(req.getFullName());
+//        user.setEmail(req.getEmail());
+//        user.setPhone(req.getPhone());
+//        
+//        user.setPassword(passwordEncoder.encode(req.getPassword()));
+//        user.setIsActive(true);
+//        user.setCreatedAt(new Date());
+//
+//        long targetRoleId = isProvider ? 2L : 3L;
+//        Roles role = userRepository.findRoleById(targetRoleId);
+//        user.setRoleId(role);
+//        
+//        boolean isProvider = "PROVIDER".equalsIgnoreCase(req.getRoleType());
+//        if (isProvider) {
+//            if (req.getCompanyName() == null || req.getCompanyName().isEmpty() ||
+//                req.getTaxCode() == null || req.getTaxCode().isEmpty() ||
+//                req.getHotline() == null || req.getHotline().isEmpty() ||
+//                req.getBusinessAddress() == null || req.getBusinessAddress().isEmpty()) {
+//                return AuthResponse.builder().success(false).message("Đăng ký đối tác bắt buộc phải nhập đủ thông tin Doanh nghiệp!").build();
+//            }
+//
+//            if (providerRepository.isExistsByCompanyName(req.getCompanyName())) {
+//                return AuthResponse.builder().success(false).message("Tên Công ty/Doanh nghiệp này đã được đăng ký!").build();
+//            }
+//            if (providerRepository.isExistsByTaxCode(req.getTaxCode())) {
+//                return AuthResponse.builder().success(false).message("Mã số thuế đã tồn tại trên hệ thống!").build();
+//            }
+//        }
+//        
+//        try {
+//            Map uploadResult = cloudinary.uploader().upload(
+//                    req.getAvatar().getBytes(),
+//                    ObjectUtils.emptyMap()
+//            );
+//            String cloudUrl = (String) uploadResult.get("secure_url");
+//            user.setAvatarUrl(cloudUrl);
+//        } catch (IOException e) {
+//            return AuthResponse.builder().success(false).message("Lỗi khi upload ảnh đại diện lên Cloudinary!").build();
+//        }
+//        
+//        userRepository.save(user);
+//
+//        if (isProvider) {
+//            Providers provider = new Providers();
+//            provider.setUserId(user);
+//            provider.setCompanyName(req.getCompanyName());
+//            provider.setTaxCode(req.getTaxCode());
+//            provider.setHotline(req.getHotline());
+//            provider.setBusinessAddress(req.getBusinessAddress());
+//            provider.setIsApproved(false);
+//            provider.setApprovedAt(null);
+//            providerRepository.save(provider);
+//        }
+//        String msg = isProvider ? "Đăng ký hồ sơ thành công. Vui lòng đợi Admin phê duyệt!"
+//                                : "Đăng ký tài khoản thành công!";
+//        return AuthResponse.builder().success(true).message(msg).build();
+//    }
+
     public AuthResponse register(RegisterRequest req) {
-        //Check trùng lặp tài khoản và email trên hệ thống bảng Users
         if (userRepository.isExistByUsername(req.getUsername())) {
             return AuthResponse.builder().success(false).message("Tên tài khoản này đã tồn tại!").build();
         }
         if (userRepository.isExistByEmail(req.getEmail())) {
             return AuthResponse.builder().success(false).message("Email này đã được đăng ký rồi!").build();
         }
-
+        if (userRepository.isExistByPhone(req.getPhone())) {
+            return AuthResponse.builder().success(false).message("Số điện thoại này đã được đăng ký rồi!").build();
+        }
         if (req.getAvatar() == null || req.getAvatar().isEmpty()) {
             return AuthResponse.builder().success(false).message("Ảnh đại diện là bắt buộc!").build();
         }
-
         boolean isProvider = "PROVIDER".equalsIgnoreCase(req.getRoleType());
+        
         if (isProvider) {
             if (req.getCompanyName() == null || req.getCompanyName().isEmpty() ||
                 req.getTaxCode() == null || req.getTaxCode().isEmpty() ||
@@ -81,19 +157,15 @@ public class UserServiceImpl implements UserService{
         user.setFullName(req.getFullName());
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone());
-        
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setIsActive(true);
         user.setCreatedAt(new Date());
 
-        Roles role = new Roles();
-        if (isProvider) {
-            role.setId(2L); // 2L ID PROVIDER 
-        } else {
-            role.setId(3L); // 3L là ID CUSTOMER 
-        }
+        // Bốc Role chính thống từ DB lên gài vào để tránh lỗi Transient Role
+        long targetRoleId = isProvider ? 2L : 3L;
+        Roles role = userRepository.findRoleById(targetRoleId);
         user.setRoleId(role);
-        
+
         try {
             Map uploadResult = cloudinary.uploader().upload(
                     req.getAvatar().getBytes(),
@@ -102,27 +174,28 @@ public class UserServiceImpl implements UserService{
             String cloudUrl = (String) uploadResult.get("secure_url");
             user.setAvatarUrl(cloudUrl);
         } catch (IOException e) {
-            return AuthResponse.builder().success(false).message("Lỗi hỏa hoạn khi upload ảnh đại diện lên Cloudinary!").build();
+            // Spring bắt buộc nếu muốn rollback tự động thì đoạn này phải ném ra RuntimeException
+            throw new RuntimeException("Lỗi khi upload ảnh đại diện lên Cloudinary!");
         }
-        
-        userRepository.save(user);
 
         if (isProvider) {
             Providers provider = new Providers();
-            provider.setUserId(user);
             provider.setCompanyName(req.getCompanyName());
             provider.setTaxCode(req.getTaxCode());
             provider.setHotline(req.getHotline());
             provider.setBusinessAddress(req.getBusinessAddress());
             provider.setIsApproved(false);
             provider.setApprovedAt(null);
-            providerRepository.save(provider);
+            
+            provider.setUserId(user);   
+            user.setProviders(provider); 
         }
+        userRepository.save(user);
         String msg = isProvider ? "Đăng ký hồ sơ thành công. Vui lòng đợi Admin phê duyệt!"
                                 : "Đăng ký tài khoản thành công!";
         return AuthResponse.builder().success(true).message(msg).build();
     }
-
+    
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(String username, String password) {
@@ -145,5 +218,56 @@ public class UserServiceImpl implements UserService{
                 .userDetail(user)
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfile getUserProfile(String username) {
+        Users user = userRepository.findByUsername(username);
+        if (user == null) {
+            throw new RuntimeException("Không tìm thấy người dùng với username: " + username);
+        }
+        UserProfile profile = new UserProfile();
+        profile.setUsername(user.getUsername());
+        profile.setFullName(user.getFullName());
+        profile.setEmail(user.getEmail());
+        profile.setPhone(user.getPhone());
+        profile.setAvatarUrl(user.getAvatarUrl());
+        profile.setRoleName(user.getRoleId().getRoleName());
+        
+        if (user.getProviders() != null) {
+            Providers provider = user.getProviders();
+            profile.setCompanyName(provider.getCompanyName());
+            profile.setTaxCode(provider.getTaxCode());
+            profile.setHotline(provider.getHotline());
+            profile.setBusinessAddress(provider.getBusinessAddress());
+            profile.setIsApproved(provider.getIsApproved());
+        }
+        
+        return profile;
+    }
+
+    @Override
+    public String updateUserAvatar(String username, MultipartFile file) {
+        Users user = userRepository.findByUsername(username);
+        if (user == null) throw new RuntimeException("Không tìm thấy người dùng với username: " + username);
+        
+        if (user.getIsActive() != null && !user.getIsActive()) 
+            throw new RuntimeException("Tài khoản này hiện đang bị khóa hoạt động, không thể sửa đổi hồ sơ!");
+        
+
+        try {
+            Map uploadResult = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.emptyMap()
+            );
+            String cloudUrl = (String) uploadResult.get("secure_url");
+            user.setAvatarUrl(cloudUrl);
+            userRepository.save(user);
+            return cloudUrl;
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi upload ảnh đại diện lên Cloudinary!");
+        }
+    }
+
 
 }

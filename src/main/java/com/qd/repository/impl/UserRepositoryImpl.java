@@ -6,6 +6,7 @@ package com.qd.repository.impl;
 
 import com.qd.repository.UserRepository;
 import com.qd.pojo.Categories;
+import com.qd.pojo.Roles;
 import com.qd.pojo.Users;
 import com.qd.repository.UserRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -24,44 +25,64 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Repository
 @Transactional
-public class UserRepositoryImpl implements UserRepository{
+public class UserRepositoryImpl implements UserRepository {
 
     @Autowired
     private LocalSessionFactoryBean factory;
     @Autowired
     private Environment env;
-    
-        @Override
-        public Users findByUsername(String username) {
-        Session session = this.factory.getObject().getCurrentSession();    
-        CriteriaBuilder b = session.getCriteriaBuilder();      
-        CriteriaQuery<Users> q = b.createQuery(Users.class);
-        Root<Users> root = q.from(Users.class);
-        q.select(root).where(b.equal(root.get("username"), username));
-        return  session.createQuery(q).uniqueResult();
+
+    private Session getSession() {
+        return this.factory.getObject().getCurrentSession();
     }
-    
+
+    @Override
+    public Users findByUsername(String username) {
+//        Session session = this.factory.getObject().getCurrentSession();    
+//        CriteriaBuilder b = session.getCriteriaBuilder();      
+//        CriteriaQuery<Users> q = b.createQuery(Users.class);
+//        Root<Users> root = q.from(Users.class);
+//        q.select(root).where(b.equal(root.get("username"), username));
+//        return  session.createQuery(q).uniqueResult();
+        return getSession()
+                .createNamedQuery("Users.findByUsername", Users.class)
+                .setParameter("username", username)
+                .uniqueResult();
+    }
+
     @Override
     public boolean isExistByUsername(String username) {
-        return findByUsername(username)!=null; // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        return findByUsername(username) != null; // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 
     @Override
     public boolean isExistByEmail(String email) {
-        Session session = this.factory.getObject().getCurrentSession();    
-        CriteriaBuilder b = session.getCriteriaBuilder();      
-        CriteriaQuery<Long> q = b.createQuery(Long.class);
-        Root<Users> root = q.from(Users.class);
-        q.select(b.count(root)).where(b.equal(root.get("email"), email));
-        
-        Long count =session.createQuery(q).uniqueResult();
-        return count!=null &&count >0;
+        Users user = getSession()
+                .createNamedQuery("Users.findByEmail", Users.class)
+                .setParameter("email", email)
+                .uniqueResult();
+        return user != null;
     }
-
 
     @Override
     public void save(Users user) {
+        getSession().merge(user);
+//        Session session = this.factory.getObject().getCurrentSession();
+//        session.merge(user); //persist tao moi; merge de saveOrUpdate    }
+    }
+
+    @Override
+    public Roles findRoleById(long roleId) {
         Session session = this.factory.getObject().getCurrentSession();
-        session.merge(user); //persist tao moi; merge de saveOrUpdate    }
+        return session.get(Roles.class, roleId);
+    }
+
+    @Override
+    public boolean isExistByPhone(String phone) {
+        Users user = getSession()
+                .createNamedQuery("Users.findByPhone", Users.class)
+                .setParameter("phone", phone)
+                .uniqueResult();
+        return user != null;
     }
 }

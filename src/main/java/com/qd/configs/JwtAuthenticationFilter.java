@@ -23,38 +23,41 @@ import org.springframework.security.core.context.SecurityContextHolder;
  * @author ADMIN
  */
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter{
     @Autowired
     private JwtProvider jwtProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
-
-        try {
-            String bearerToken = request.getHeader("Authorization");
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        
+        try{
+            String bearerToken=request.getHeader("Authorization");
             if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-                // Cắt bỏ 7 ký tự đầu "Bearer " để lấychuỗi Token thô
-                String token = bearerToken.substring(7);
+                String token = bearerToken.substring(7);      
                 // Token vàoJwtProvider để kiểm tra hạn dùng + chữ ký
                 if (jwtProvider.validateToken(token)) {
-                    // Nếu chuẩn đét, lệnh chạy tiếp xuống đây để móc tên tài khoản ra
                     String username = jwtProvider.getUsernameFromJWT(token);
+                    String role = jwtProvider.getRoleFromJWT(token);
+                    if (role == null) {
+                        role = "ROLE_CUSTOMER";
+                    }
+                    
+                    if (!role.startsWith("ROLE_")) {
+                        role = "ROLE_" + role;
+                    }
 
-                    // Tạm thời gán cứng quyền hoặc bóc quyền từ Token ra để test thô
-                    String role = "ROLE_CUSTOMER";
-
-                    // Khởi tạo lệnh Authentication của Spring Security
+                    // Khởi tạo Authentication của Spring Security
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             username, null, Collections.singletonList(new SimpleGrantedAuthority(role)));
-                    // Nạp vào hệ thống tổng ContextHolder để báo hợp lệ"
+
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
-            }
-        } catch (Exception e) {
+        }
+    }catch (Exception e) {   
             SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);
     }
-
+        
 }
+

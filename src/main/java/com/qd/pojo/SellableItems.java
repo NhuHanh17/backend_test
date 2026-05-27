@@ -11,6 +11,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -73,16 +74,16 @@ public class SellableItems implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "itemId")
     private Set<OrderDetails> orderDetailsSet;
     @JoinColumn(name = "hotel_room_item_id", referencedColumnName = "id")
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     private HotelRoomItems hotelRoomItemId;
     @JoinColumn(name = "service_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Services serviceId;
     @JoinColumn(name = "tour_item_conc_id", referencedColumnName = "id")
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     private TourItemConcs tourItemConcId;
     @JoinColumn(name = "transport_ticket_item_id", referencedColumnName = "id")
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     private TransportTicketItems transportTicketItemId;
 
     public SellableItems() {

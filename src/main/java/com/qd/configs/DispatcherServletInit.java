@@ -41,6 +41,17 @@ public class DispatcherServletInit extends AbstractAnnotationConfigDispatcherSer
     protected void customizeRegistration(ServletRegistration.Dynamic registration) {
         registration.setMultipartConfig(new MultipartConfigElement("/tmp", 5000000, 15000000, 0));
     }
+    // @Override
+    // protected void customizeRegistration(ServletRegistration.Dynamic
+    // registration) {
+    // registration.setMultipartConfig(
+    // new MultipartConfigElement(
+    // System.getProperty("java.io.tmpdir"),
+    // 10 * 1024 * 1024,
+    // 20 * 1024 * 1024,
+    // 1024 * 1024
+    // ));
+    // }
 
     @Override
     protected jakarta.servlet.Filter[] getServletFilters() {
