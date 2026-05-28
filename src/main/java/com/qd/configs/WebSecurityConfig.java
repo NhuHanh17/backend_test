@@ -177,7 +177,7 @@ public class WebSecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "https://travel-vista-frontend-ten.vercel.app/"));
+                "https://travel-vista-frontend-ten.vercel.app"));
 
         config.setAllowedMethods(List.of(
                 "GET",
