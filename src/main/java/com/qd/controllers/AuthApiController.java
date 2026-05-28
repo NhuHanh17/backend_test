@@ -4,6 +4,7 @@
  */
 package com.qd.controllers;
 
+import com.qd.annotation.RateLimiter;
 import com.qd.dto.AuthResponse;
 import com.qd.dto.ChangePasswordRequest;
 import com.qd.dto.LoginRequest;
@@ -50,6 +51,7 @@ public class AuthApiController {
     private JwtProvider jwtProvider;
 
     @PostMapping(value = "/register", consumes = { "multipart/form-data" })
+    @RateLimiter(requests = 3, seconds = 60)
     public ResponseEntity<AuthResponse> register(@ModelAttribute RegisterRequest registerRequest) {
         AuthResponse response = userService.register(registerRequest);
 
@@ -61,6 +63,7 @@ public class AuthApiController {
     }
 
     @PostMapping(value = "/login")
+    @RateLimiter(requests = 10, seconds = 60)
     public ResponseEntity<AuthResponse> register(@RequestBody LoginRequest loginRequest)// @RequestBody la json thô
     {
 

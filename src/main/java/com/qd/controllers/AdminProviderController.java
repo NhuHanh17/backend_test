@@ -4,6 +4,7 @@
  */
 package com.qd.controllers;
 
+import com.qd.annotation.RequireAdmin;
 import com.qd.dto.AdminActionRequest;
 import com.qd.dto.AuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RestController
 @RequestMapping("/api/admin/providers")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequireAdmin
 public class AdminProviderController {
     @Autowired
     private UserService userService;
