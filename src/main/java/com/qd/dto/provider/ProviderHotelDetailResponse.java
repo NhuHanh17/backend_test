@@ -18,8 +18,9 @@ public class ProviderHotelDetailResponse {
     private String name;
     private String address;
     private List<RoomDTO> rooms;
+    private List<ImageDto> images;
     
-    
+
     public ProviderHotelDetailResponse(Services s) {
         this.id = s.getId();
         this.name = s.getName();
@@ -30,8 +31,28 @@ public class ProviderHotelDetailResponse {
                         .map(RoomDTO::new).collect(Collectors.toList());
             }
         }
+        if (s.getServiceImagesSet() != null) {
+            this.images = s.getServiceImagesSet().stream()
+                    .map(img -> new ImageDto(img.getImageUrl(), img.getIsThumbnail()))
+                    .collect(Collectors.toList());
+        }
     }
     
+        
+    public static class ImageDto {
+        private String imageUrl;
+        private Boolean isThumbnail;
+
+        public ImageDto(String imageUrl, Boolean isThumbnail) {
+            this.imageUrl = imageUrl;
+            this.isThumbnail = isThumbnail;
+        }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+        public Boolean getIsThumbnail() { return isThumbnail; }
+        public void setIsThumbnail(Boolean isThumbnail) { this.isThumbnail = isThumbnail; }
+    }
+
     public static class RoomDTO {
         private Long roomId;
         private String roomType;
@@ -128,5 +149,12 @@ public class ProviderHotelDetailResponse {
      */
     public void setRooms(List<RoomDTO> rooms) {
         this.rooms = rooms;
+    }
+    public List<ImageDto> getImages() {
+        return images;
+    }
+
+    public void setImages(List<ImageDto> images) {
+        this.images = images;
     }
 }

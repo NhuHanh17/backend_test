@@ -9,6 +9,7 @@ import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import com.qd.dto.provider.BaseComprehensiveRequest;
 import com.qd.dto.provider.HotelComprehensiveRequest;
 import com.qd.dto.provider.ProviderHotelDetailResponse;
+import com.qd.dto.provider.ProviderServiceResponse;
 import com.qd.dto.provider.ProviderTourDetailResponse;
 import com.qd.dto.provider.ProviderTransportDetailResponse;
 import com.qd.dto.provider.TourComprehensiveRequest;
@@ -31,9 +32,11 @@ import com.qd.repository.ProviderRepository;
 import com.qd.repository.UserRepository;
 import com.qd.service.ProviderService;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,11 +70,11 @@ public class ProviderServiceImpl implements ProviderService {
         int pageSize = this.env.getProperty("services.page_size", Integer.class, 10);
         int currentPage = (params != null) ? Integer.parseInt(params.getOrDefault("page", "1")) : 1;
         
-        List<com.qd.dto.provider.ProviderServiceResponse> content = servicesList.stream()
-                .map(com.qd.dto.provider.ProviderServiceResponse::new)
-                .collect(java.util.stream.Collectors.toList());
+        List<ProviderServiceResponse> content = servicesList.stream()
+                .map(ProviderServiceResponse::new)
+                .collect(Collectors.toList());
 
-        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         result.put("content", content);
         result.put("totalElements", totalElements);
         result.put("page", currentPage);

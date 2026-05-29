@@ -5,6 +5,8 @@
 package com.qd.dto.provider;
 
 import com.qd.pojo.Services;
+import com.qd.pojo.TourItemConcs;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,6 +20,7 @@ public class ProviderTourDetailResponse {
     private String departureLocation;
     private String destinationLocation;
     private List<ScheduleDTO> schedules;
+    private List<ImageDto> images;
 
     public ProviderTourDetailResponse(Services s) {
         this.id = s.getId();
@@ -30,6 +33,37 @@ public class ProviderTourDetailResponse {
                         .map(ScheduleDTO::new).collect(Collectors.toList());
             }
         }
+        if (s.getServiceImagesSet() != null) {
+            this.images = s.getServiceImagesSet().stream()
+                    .map(img -> new ImageDto(img.getImageUrl(), img.getIsThumbnail()))
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public static class ImageDto {
+        private String imageUrl;
+        private Boolean isThumbnail;
+
+        public ImageDto(String imageUrl, Boolean isThumbnail) {
+            this.imageUrl = imageUrl;
+            this.isThumbnail = isThumbnail;
+        }
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+
+        public void setImageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
+        }
+
+        public Boolean getIsThumbnail() {
+            return isThumbnail;
+        }
+
+        public void setIsThumbnail(Boolean isThumbnail) {
+            this.isThumbnail = isThumbnail;
+        }
     }
 
     public static class ScheduleDTO {
@@ -38,7 +72,7 @@ public class ProviderTourDetailResponse {
         private int maxParticipants;
         private ItemDTO item;
 
-        public ScheduleDTO(com.qd.pojo.TourItemConcs conc) {
+        public ScheduleDTO(TourItemConcs conc) {
             this.scheduleId = conc.getId();
             this.departureTime = conc.getDepartureTime();
             this.maxParticipants = conc.getMaxParticipants();
@@ -46,10 +80,22 @@ public class ProviderTourDetailResponse {
                 this.item = new ItemDTO(conc.getSellableItems());
             }
         }
-        public Long getScheduleId() { return scheduleId; }
-        public java.util.Date getDepartureTime() { return departureTime; }
-        public int getMaxParticipants() { return maxParticipants; }
-        public ItemDTO getItem() { return item; }
+
+        public Long getScheduleId() {
+            return scheduleId;
+        }
+
+        public java.util.Date getDepartureTime() {
+            return departureTime;
+        }
+
+        public int getMaxParticipants() {
+            return maxParticipants;
+        }
+
+        public ItemDTO getItem() {
+            return item;
+        }
 
     }
 
@@ -63,35 +109,46 @@ public class ProviderTourDetailResponse {
             this.price = item.getPrice();
             this.availableSlots = item.getAvailableSlots();
         }
-        public Long getItemId() { return itemId; }
-        public java.math.BigDecimal getPrice() { return price; }
-        public int getAvailableSlots() { return availableSlots; }
 
-        
-        /**
-         * @param itemId the itemId to set
-         */
-        public void setItemId(Long itemId) {
-            this.itemId = itemId;
+        public Long getItemId() {
+            return itemId;
         }
 
-        /**
-         * @param price the price to set
-         */
-        public void setPrice(java.math.BigDecimal price) {
-            this.price = price;
+        public java.math.BigDecimal getPrice() {
+            return price;
         }
 
-        /**
-         * @param availableSlots the availableSlots to set
-         */
-        public void setAvailableSlots(int availableSlots) {
-            this.availableSlots = availableSlots;
+        public int getAvailableSlots() {
+            return availableSlots;
         }
     }
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public String getDepartureLocation() { return departureLocation; }
-    public String getDestinationLocation() { return destinationLocation; }
-    public List<ScheduleDTO> getSchedules() { return schedules; }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDepartureLocation() {
+        return departureLocation;
+    }
+
+    public String getDestinationLocation() {
+        return destinationLocation;
+    }
+
+    public List<ScheduleDTO> getSchedules() {
+        return schedules;
+    }
+
+    public List<ImageDto> getImages() {
+        return images;
+    }
+
+    public void setImages(List<ImageDto> images) {
+        this.images = images;
+    }
+    
 }

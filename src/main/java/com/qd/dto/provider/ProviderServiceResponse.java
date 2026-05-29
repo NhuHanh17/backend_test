@@ -6,6 +6,8 @@ package com.qd.dto.provider;
 
 import com.qd.pojo.Services;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -18,12 +20,20 @@ public class ProviderServiceResponse {
     private String status;
     private Date createdAt;
 
+    private List<String> images;
+
     public ProviderServiceResponse(Services s) {
         this.id = s.getId();
         this.name = s.getName();
         this.serviceType = s.getServiceType() != null ? s.getServiceType().name() : null;
         this.status = s.getStatus() != null ? s.getStatus().name() : null;
         this.createdAt = s.getCreatedAt();
+
+        if (s.getServiceImagesSet() != null) {
+            this.images = s.getServiceImagesSet().stream()
+                    .map(img -> img.getImageUrl())
+                    .collect(Collectors.toList());
+        }
     }
 
     /**
@@ -94,5 +104,13 @@ public class ProviderServiceResponse {
      */
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images;
     }
 }

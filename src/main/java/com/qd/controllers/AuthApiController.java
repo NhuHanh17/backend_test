@@ -63,7 +63,6 @@ public class AuthApiController {
     }
 
     @PostMapping(value = "/login")
-    @RateLimiter(requests = 10, seconds = 60)
     public ResponseEntity<AuthResponse> register(@RequestBody LoginRequest loginRequest)// @RequestBody la json thô
     {
 

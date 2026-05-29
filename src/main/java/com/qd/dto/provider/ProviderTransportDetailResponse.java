@@ -4,6 +4,7 @@
  */
 package com.qd.dto.provider;
 
+import com.qd.dto.provider.ProviderTourDetailResponse.ImageDto;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.Services;
 import java.util.List;
@@ -21,6 +22,7 @@ public class ProviderTransportDetailResponse {
     private String departureStation;
     private String arrivalStation;
     private List<TicketDTO> tickets; 
+    private List<ImageDto> images;
 
     public ProviderTransportDetailResponse(Services s) {
         this.id = s.getId();
@@ -36,6 +38,24 @@ public class ProviderTransportDetailResponse {
                         .map(TicketDTO::new).collect(Collectors.toList());
             }
         }
+        if (s.getServiceImagesSet() != null) {
+            this.images = s.getServiceImagesSet().stream()
+                    .map(img -> new ImageDto(img.getImageUrl(), img.getIsThumbnail()))
+                    .collect(Collectors.toList());
+        }
+    }
+    public static class ImageDto {
+        private String imageUrl;
+        private Boolean isThumbnail;
+
+        public ImageDto(String imageUrl, Boolean isThumbnail) {
+            this.imageUrl = imageUrl;
+            this.isThumbnail = isThumbnail;
+        }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+        public Boolean getIsThumbnail() { return isThumbnail; }
+        public void setIsThumbnail(Boolean isThumbnail) { this.isThumbnail = isThumbnail; }
     }
 
     public static class TicketDTO {
@@ -97,4 +117,11 @@ public class ProviderTransportDetailResponse {
     public void setDepartureStation(String departureStation) { this.departureStation = departureStation; }
     public void setArrivalStation(String arrivalStation) { this.arrivalStation = arrivalStation; }
     public void setTickets(List<TicketDTO> tickets) { this.tickets = tickets; }
+    public List<ImageDto> getImages() {
+        return images;
+    }
+
+    public void setImages(List<ImageDto> images) {
+        this.images = images;
+    }
 }

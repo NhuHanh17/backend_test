@@ -199,10 +199,18 @@ public class ProviderRepositoryImpl implements ProviderRepository {
         CriteriaBuilder b = session.getCriteriaBuilder();
         CriteriaQuery<Services> q = b.createQuery(Services.class);
         Root<Services> root = q.from(Services.class);
+        root.fetch("serviceImagesSet",JoinType.LEFT);
+
         q.select(root).distinct(true); 
 
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(b.equal(root.get("providerId").get("id"), providerId));
+
+        try {
+            predicates.add(b.notEqual(root.get("status"), ServiceStatus.valueOf("DELETED")));
+        } catch (IllegalArgumentException e) {
+                // Nếu không có trạng thái DELETED trong enum, bỏ qua điều kiện này
+        }
 
         if (params != null && params.get("serviceType") != null) {
             String typeStr = params.get("serviceType").toUpperCase();
@@ -265,7 +273,8 @@ public class ProviderRepositoryImpl implements ProviderRepository {
         CriteriaBuilder b = session.getCriteriaBuilder();
         CriteriaQuery<Services> q = b.createQuery(Services.class);
         Root<Services> root = q.from(Services.class);
-        q.select(root);
+        q.select(root).distinct(true);
+        root.fetch("serviceImagesSet", JoinType.LEFT);
 
         if (type == ServiceType.TOUR) {
             Fetch<Services, TourDetails> tourFetch = root.fetch("tourDetails", JoinType.LEFT);
@@ -283,7 +292,12 @@ public class ProviderRepositoryImpl implements ProviderRepository {
             b.equal(root.get("serviceType"), type)
         ));
 
-        try { return session.createQuery(q).getSingleResult(); } catch (Exception e) { return null; }
+        try { 
+            return session.createQuery(q).getSingleResult(); 
+        } 
+        catch (Exception e) {
+             return null; 
+            }
     }
 
     @Override
