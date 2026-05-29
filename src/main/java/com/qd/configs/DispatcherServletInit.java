@@ -6,7 +6,6 @@ package com.qd.configs;
 
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.ServletRegistration;
-import org.springframework.security.config.annotation.web.WebSecurityConfigurer;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
 /**
@@ -20,7 +19,7 @@ public class DispatcherServletInit extends AbstractAnnotationConfigDispatcherSer
         return new Class[] {
                 ThymeleafConfigs.class,
                 HibernateConfigs.class,
-                WebSecurityConfigurer.class,
+                WebSecurityConfig.class,
                 JwtAuthenticationFilter.class
 
         };
