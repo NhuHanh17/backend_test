@@ -4,6 +4,7 @@
  */
 package com.qd.repository.impl;
 
+import com.qd.enums.ItemStatus;
 import com.qd.enums.ServiceStatus;
 import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
@@ -21,6 +22,7 @@ import com.qd.pojo.Users;
 import com.qd.repository.ProviderRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.CriteriaUpdate;
 import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -111,7 +113,7 @@ public class ProviderRepositoryImpl implements ProviderRepository {
 
             if ("rejected".equalsIgnoreCase(type)) {
                 predicates.add(b.equal(userJoin.get("isActive"), true));
-                predicates.add(b.isNotNull(root.get("statusReason"))); // 👑 REASON != NULL
+                predicates.add(b.isNotNull(root.get("statusReason"))); 
             } else {
                 predicates.add(b.equal(userJoin.get("isActive"), true));
                 predicates.add(b.isNull(root.get("statusReason")));    // REASON == NULL
@@ -206,11 +208,11 @@ public class ProviderRepositoryImpl implements ProviderRepository {
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(b.equal(root.get("providerId").get("id"), providerId));
 
-        try {
-            predicates.add(b.notEqual(root.get("status"), ServiceStatus.valueOf("DELETED")));
-        } catch (IllegalArgumentException e) {
-                // Nếu không có trạng thái DELETED trong enum, bỏ qua điều kiện này
-        }
+        // try {
+        //     predicates.add(b.notEqual(root.get("status"), ServiceStatus.valueOf("DELETED")));
+        // } catch (IllegalArgumentException e) {
+        //         // Nếu không có trạng thái DELETED trong enum, bỏ qua điều kiện này
+        // }
 
         if (params != null && params.get("serviceType") != null) {
             String typeStr = params.get("serviceType").toUpperCase();
@@ -283,21 +285,26 @@ public class ProviderRepositoryImpl implements ProviderRepository {
             Fetch<Services, HotelDetails> hotelFetch = root.fetch("hotelDetails", JoinType.LEFT);
             hotelFetch.fetch("hotelRoomItemsSet", JoinType.LEFT);
         } else if (type == ServiceType.TRANSPORT) {
-            Fetch<Services,TransportDetails> transportFetch = root.fetch("transportDetails", JoinType.LEFT);
+            Fetch<Services, TransportDetails> transportFetch = root.fetch("transportDetails", JoinType.LEFT);
             transportFetch.fetch("transportTicketItemsSet", JoinType.LEFT);
         }
 
-        q.where(b.and(
-            b.equal(root.get("id"), serviceId),
-            b.equal(root.get("serviceType"), type)
-        ));
-
+        q.where(b.and(b.equal(root.get("id"), serviceId), b.equal(root.get("serviceType"), type)));
         try { 
-            return session.createQuery(q).getSingleResult(); 
-        } 
-        catch (Exception e) {
-             return null; 
-            }
+            List<Services> resultList = session.createQuery(q).getResultList();
+            return (resultList != null && !resultList.isEmpty()) ? resultList.get(0) : null;
+        } catch (Exception e) { return null; }
+    }
+
+    @Override
+    public Services getServiceById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(Services.class, id);
+    }
+
+    
+    @Override
+    public void updateService(Services s) {
+        this.factory.getObject().getCurrentSession().merge(s);
     }
 
     @Override
@@ -308,6 +315,7 @@ public class ProviderRepositoryImpl implements ProviderRepository {
             session.merge(service); 
         }
     }
+    
 
     @Override
     public void saveTourDetails(TourDetails tourDetails) {
@@ -388,5 +396,76 @@ public class ProviderRepositoryImpl implements ProviderRepository {
     public void saveServiceImage(ServiceImages img) {
         this.factory.getObject().getCurrentSession().merge(img);
 }
+
+    @Override
+    public void removeServiceImage(ServiceImages img) {
+        this.factory.getObject().getCurrentSession().remove(img);
+    }
+
+    @Override
+    public void updateSingleSellableStatus(Long serviceId, String targetField, Long subItemId, ItemStatus status) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaUpdate<SellableItems> q = b.createCriteriaUpdate(SellableItems.class);
+        Root<SellableItems> root = q.from(SellableItems.class);
+
+        q.set(root.get("itemStatus"), status);
+        q.where(b.and(
+            b.equal(root.get("serviceId").get("id"), serviceId),
+            b.equal(root.get(targetField).get("id"), subItemId)
+        ));
+
+        session.createMutationQuery(q).executeUpdate();
+    }
+
+//////////////////////////////////////////////============
+    @Override
+    public void updateAllSellableStatusByService(Long serviceId, ItemStatus status) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaUpdate<SellableItems> q = b.createCriteriaUpdate(SellableItems.class);
+        Root<SellableItems> root = q.from(SellableItems.class);
+
+        q.set(root.get("itemStatus"), status);
+        q.where(b.equal(root.get("serviceId").get("id"), serviceId));
+
+        session.createMutationQuery(q).executeUpdate();
+    }
+
+    @Override
+    public SellableItems getSellableItemBySubItemId(Long serviceId, String targetField, Long subItemId) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<SellableItems> q = b.createQuery(SellableItems.class);
+        Root<SellableItems> root = q.from(SellableItems.class);
+
+        q.select(root).where(b.and(
+            b.equal(root.get("serviceId").get("id"), serviceId),
+            b.equal(root.get(targetField).get("id"), subItemId)
+        ));
+
+        return session.createQuery(q).getSingleResultOrNull();
+    }
+
+    @Override
+    public HotelRoomItems getRoomById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(HotelRoomItems.class, id);
+    }
+
+    @Override
+    public TourItemConcs getTourScheduleById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(TourItemConcs.class, id);
+    }
+
+    @Override
+    public TransportTicketItems getTransportTicketById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(TransportTicketItems.class, id);
+    }
+
+    @Override
+    public SellableItems getSellableItemById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(SellableItems.class, id);
+    }
+
 
 }

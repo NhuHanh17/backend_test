@@ -14,8 +14,11 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.qd.annotation.CheckOwnership;
+import com.qd.annotation.CheckServiceOwnership;
 import com.qd.annotation.RateLimiter;
+import com.qd.pojo.Services;
 import com.qd.pojo.Users;
+import com.qd.repository.ProviderRepository;
 import com.qd.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +32,9 @@ import org.springframework.security.core.Authentication;
 public class SecurityAspect {
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired 
+    private ProviderRepository providerRepository;
 
     private final Map<String, Long> limitMap = new ConcurrentHashMap<>();
 
@@ -124,13 +130,19 @@ public class SecurityAspect {
 
     @Before("@annotation(com.qd.annotation.RateLimiter)")
     public void checkRateLimit(JoinPoint joinPoint) {
-        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        RateLimiter limiter = method.getAnnotation(RateLimiter.class);
-
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
+            String uri = request.getRequestURI();
+            
+            if (uri.contains("/auth/login") || uri.contains("/auth/register") || uri.contains("/login")) {
+                return;
+            }
+
+            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+            Method method = signature.getMethod();
+            RateLimiter limiter = method.getAnnotation(RateLimiter.class);
+
             String clientIp = request.getRemoteAddr();
             String key = method.getName() + "_" + clientIp;
 
@@ -139,11 +151,69 @@ public class SecurityAspect {
 
             if (lastRequestTime != null) {
                 long timePassed = currentTime - lastRequestTime;
-                if (timePassed < (limiter.seconds() * 1000L)) {
-                    throw new RuntimeException("Thao tác quá nhanh! Vui lòng đợi vài giây rồi thử lại!");
+                // !!!!!!!!!!!cache RAM chặn tạm thời, nếu muốn xịn sò hơn thì sau này có thể đổi sang Redis hoặc Memcached để lưu trữ phân tán, tránh tình trạng mất dữ liệu khi server restart
+                if (timePassed > 0 && timePassed < (limiter.seconds() * 1000L)) {
+                    throw new RuntimeException("Thao tác quá nhanh, vui lòng đợi vài giây rồi thử lại!");
                 }
             }
             limitMap.put(key, currentTime); 
+        }
+    }
+
+    @Before("@annotation(com.qd.annotation.CheckServiceOwnership)")
+    public void checkServiceOwnership(JoinPoint joinPoint) {
+        this.checkLogin(); 
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String tokenUsername = auth.getName();
+
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().toUpperCase().contains("ADMIN"));
+        if (isAdmin) {
+            return;
+        }
+
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        CheckServiceOwnership annotation = method.getAnnotation(CheckServiceOwnership.class);
+        String targetParamName = annotation.paramName();
+
+        Object[] args = joinPoint.getArgs();
+        Parameter[] parameters = method.getParameters();
+        Long serviceId = null;
+
+        for (int i = 0; i < parameters.length; i++) {
+            if (parameters[i].isAnnotationPresent(PathVariable.class)) {
+                PathVariable pathVar = parameters[i].getAnnotation(PathVariable.class);
+                String value = pathVar.value().isEmpty() ? pathVar.name() : pathVar.value();
+                if (value.isEmpty()) {
+                    value = parameters[i].getName();
+                }
+                if (targetParamName.equalsIgnoreCase(value)) {
+                    if (args[i] != null) {
+                        serviceId = Long.parseLong(String.valueOf(args[i]));
+                    }
+                    break;
+                }
+            }
+        }
+        if (serviceId == null) {
+            throw new RuntimeException("Lỗi hệ thống Aspect: Không gặt được tham số " + targetParamName + " trên URL!");
+        }
+
+        Services service = providerRepository.getServiceById(serviceId);
+        if (service == null) {
+            throw new RuntimeException("Lỗi: Bài đăng dịch vụ này không tồn tại trên hệ thống!");
+        }
+
+        Users currentUser = userRepository.findByUsername(tokenUsername);
+        if (currentUser == null || currentUser.getProviders() == null) {
+            throw new RuntimeException("Tài khoản của bạn không có tư cách Nhà cung cấp hợp lệ!");
+        }
+        Long ownerProviderId = service.getProviderId().getId(); 
+        Long currentProviderId = currentUser.getProviders().getId(); 
+        if (!currentProviderId.equals(ownerProviderId)) {
+            throw new RuntimeException("Vi phạm bảo mật nghiêm trọng: Bạn không có quyền can thiệp vào tài nguyên dữ liệu của người khác!");
         }
     }
 }

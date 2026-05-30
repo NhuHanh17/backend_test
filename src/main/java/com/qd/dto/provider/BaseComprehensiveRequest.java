@@ -6,6 +6,7 @@ package com.qd.dto.provider;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import java.util.List;
 
 /**
  *
@@ -26,8 +27,8 @@ public class BaseComprehensiveRequest {
     private String name;
     private String description;
     private String serviceType; 
-    private Long categoryId;
     private String action;
+    private List<Long> categoryIds;
 
     /**
      * @return the name
@@ -72,18 +73,19 @@ public class BaseComprehensiveRequest {
     }
 
     /**
-     * @return the categoryId
+     * @return the categoryIds
      */
-    public Long getCategoryId() {
-        return categoryId;
+    public List<Long> getCategoryIds() {
+        return categoryIds;
     }
 
     /**
-     * @param categoryId the categoryId to set
+     * @param categoryIds the categoryIds to set
      */
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
+    public void setCategoryIds(List<Long> categoryIds) {
+        this.categoryIds = categoryIds;
     }
+    
 
     /**
      * @return the action

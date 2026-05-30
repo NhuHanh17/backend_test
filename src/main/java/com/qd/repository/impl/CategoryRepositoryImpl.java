@@ -4,6 +4,7 @@
  */
 package com.qd.repository.impl;
 
+import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.repository.CategoryRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -37,25 +38,27 @@ public class CategoryRepositoryImpl implements CategoryRepository{
 //        return query.getResultList();
         Session session = this.factory.getObject().getCurrentSession();    
         CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Categories> q = b.createQuery(Categories.class);
 
-        //Khai bao rang muon tao 1 cau truy van co ket qua tra ve la cac Product
-        CriteriaQuery<Categories> q = b.createQuery(Categories.class);//Từ cái root này có thể trỏ đến các thuộc tính như 
-        //root.get("name") hay root.get("price").
-
-        Root<Categories> root = q.from(Categories.class); // giong FROM Product
-        q.select(root); //tương đương với SELECT *
-        Query<Categories> query = session.createQuery(q);// Vác bản thiết kế 'q' nạp vào session để tạo ra câu lệnh thực thi chuẩn của Hibernate
-
+        Root<Categories> root = q.from(Categories.class); 
+        q.select(root); 
+        if (params != null && params.containsKey("serviceType") && !params.get("serviceType").trim().isEmpty()) {
+            try {
+                ServiceType typeEnum = ServiceType.valueOf(params.get("serviceType").toUpperCase());
+                q.where(b.equal(root.get("serviceType"), typeEnum)); 
+            } catch (IllegalArgumentException e) {
+                return List.of(); // Trả về danh sách rỗng nếu serviceType không hợp lệ
+            }
+        }
+        Query<Categories> query = session.createQuery(q);
         String pageSizeStr = this.env.getProperty("categories.page_size", "20");
         int pageSize = Integer.parseInt(pageSizeStr);
         
-        // Lấy số trang khách muốn coi từ params (Ví dụ: ReactJS truyền lên ?page=2)
-        int page = 1; // Mặc định nếu không truyền gì thì coi trang 1
+        int page = 1; 
         if (params != null && params.containsKey("page")) {
             page = Integer.parseInt(params.get("page"));
         }
         
-        // Tính vị trí bắt đầu cắt hàng trong database
         int start = (page - 1) * pageSize;
         query.setMaxResults(pageSize);
         query.setFirstResult(start);

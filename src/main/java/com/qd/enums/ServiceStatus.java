@@ -9,5 +9,5 @@ package com.qd.enums;
  * @author ADMIN
  */
 public enum ServiceStatus {
-    DRAFT, ACTIVATE, SUSPENDED
+    DRAFT, ACTIVATE, SUSPENDED, DELETED 
 }

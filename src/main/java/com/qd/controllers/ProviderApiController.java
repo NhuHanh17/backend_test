@@ -5,16 +5,22 @@
 package com.qd.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qd.annotation.CheckOwnership;
+import com.qd.annotation.CheckServiceOwnership;
 import com.qd.annotation.RequiresApprovedProvider;
 import com.qd.dto.provider.BaseComprehensiveRequest;
 import com.qd.dto.provider.HotelComprehensiveRequest;
 import com.qd.dto.provider.TourComprehensiveRequest;
 import com.qd.dto.provider.TransportComprehensiveRequest;
+import com.qd.dto.provider.UpdateImagesRequest;
+import com.qd.dto.provider.UpdateSubItemRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -23,9 +29,11 @@ import com.qd.service.ProviderService;
 import com.qd.service.UserService;
 import java.security.Principal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,10 +54,12 @@ public class ProviderApiController {
     @Autowired
     private ProviderService providerService;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> getMyServices(
             Principal principal, @RequestParam Map<String, String> params) {
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", providerService.getMyServicesList(principal.getName(), params));
@@ -58,9 +68,9 @@ public class ProviderApiController {
 
     @GetMapping("/{id}/{serviceType}")
     public ResponseEntity<Map<String, Object>> getMyServiceDetail(
-            java.security.Principal principal, 
-            @PathVariable("id") Long id,@PathVariable("serviceType") String serviceType) {
-        
+            java.security.Principal principal,
+            @PathVariable("id") Long id, @PathVariable("serviceType") String serviceType) {
+
         String cleanType = serviceType.toUpperCase();
         if (cleanType.contains("TOUR")) {
             cleanType = "TOUR";
@@ -69,26 +79,110 @@ public class ProviderApiController {
         } else if (cleanType.contains("TRANSPORT") || cleanType.contains("XE")) {
             cleanType = "TRANSPORT";
         }
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", providerService.getMyServiceDetail(principal.getName(), id, cleanType));
-        
+
         return ResponseEntity.ok(response);
     }
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    
+    // POST /{id}/{serviceType} -> Thêm 1 item con (Lỡ cái này truyền activate của
+    // thg cha draf?)
+    @PostMapping("/{id}/{serviceType}")
+    @CheckServiceOwnership(paramName = "id")
+    public ResponseEntity<Map<String, Object>> addSubItem(
+            Principal principal,
+            @PathVariable("id") Long id,
+            @PathVariable("serviceType") String serviceType,
+            @RequestParam("data") String dataJson) {
+
+        String cleanType = serviceType.toUpperCase();
+        if (cleanType.contains("TOUR"))
+            cleanType = "TOUR";
+        else if (cleanType.contains("HOTEL"))
+            cleanType = "HOTEL";
+        else
+            cleanType = "TRANSPORT";
+
+        BaseComprehensiveRequest req = null;
+        try {
+            Map<String, Object> rawMap = objectMapper.readValue(dataJson, Map.class);
+            if ("TOUR".equals(cleanType)) {
+                req = objectMapper.readValue(dataJson, TourComprehensiveRequest.class);
+            } else if ("HOTEL".equals(cleanType)) {
+                req = objectMapper.readValue(dataJson, HotelComprehensiveRequest.class);
+            } else {
+                req = objectMapper.readValue(dataJson, TransportComprehensiveRequest.class);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi cấu trúc dữ liệu JSON con gửi lên: " + e.getMessage());
+        }
+
+        providerService.addSubItemCustom(principal.getName(), id, cleanType, req);
+        return ResponseEntity.ok(
+                Map.of("success", true, "message", "Đã nạp thêm phân loại con lẻ mới vào bài đăng gốc thành công!"));
+    }
+
+    // PATCH /{id}/{serviceType}/{subItemId} -> Thay đổi trạng thái SUSPENDED của
+    // item con (tạm dừng mở bán)
+    @DeleteMapping("/{id}/{serviceType}/{subItemId}")
+    @CheckServiceOwnership(paramName = "id")
+    public ResponseEntity<Map<String, Object>> deleteSubItem(
+            Principal principal,
+            @PathVariable("id") Long id,
+            @PathVariable("serviceType") String serviceType,
+            @PathVariable("subItemId") Long subItemId) {
+
+        String cleanType = serviceType.toUpperCase();
+        if (cleanType.contains("TOUR"))
+            cleanType = "TOUR";
+        else if (cleanType.contains("HOTEL"))
+            cleanType = "HOTEL";
+        else
+            cleanType = "TRANSPORT";
+
+        providerService.softDeleteSubItem(principal.getName(), id, cleanType, subItemId);
+        return ResponseEntity.ok(Map.of("success", true, "message",
+                "Đã tạm dừng mở bán và xóa mềm phân loại con (SUSPENDED) thành công!"));
+    }
+
+    //update item con: có thể update giá, slots, trạng thái (AVAILABLE, OUT_OF_STOCK, SUSPENDED)
+    @PutMapping("/{serviceId}/{serviceType}/{subItemId}")
+    @CheckServiceOwnership(paramName = "serviceId")
+    public ResponseEntity<?> updateSubItem(
+            Principal principal,
+            @PathVariable("serviceId") Long serviceId,
+            @PathVariable("serviceType") String serviceType,
+            @PathVariable("subItemId") Long subItemId,
+
+            @RequestBody UpdateSubItemRequest req) {
+
+        providerService.updateSubItem(
+                principal.getName(),
+                serviceId,
+                serviceType,
+                subItemId,
+                req);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "message", "Cập nhật item thành công!"));
+    }
+
+    // POST / -> Tạo mới dịch vụ tổng thể kèm ảnh đại diện, trả về ID bài viết mới
+    // tạo để tiện chỉnh sửa tiếp
     @PostMapping(consumes = { "multipart/form-data" })
     public ResponseEntity<Map<String, Object>> saveComprehensiveService(
-            Principal principal,@RequestParam("data") String dataJson, 
-            @RequestPart(value = "images", required = false) MultipartFile[] files) { 
-        
+            Principal principal, @RequestParam("data") String dataJson,
+            @RequestPart(value = "images", required = false) MultipartFile[] files) {
+
         BaseComprehensiveRequest req;
         try {
             Map<String, Object> rawMap = objectMapper.readValue(dataJson, Map.class);
             String serviceType = String.valueOf(rawMap.get("serviceType")).toUpperCase();
-            
+
             if (serviceType.contains("TOUR")) {
                 req = objectMapper.readValue(dataJson, TourComprehensiveRequest.class);
             } else if (serviceType.contains("HOTEL")) {
@@ -101,11 +195,77 @@ public class ProviderApiController {
         }
 
         Long serviceId = providerService.saveComprehensiveServiceInOneGo(principal.getName(), req, files);
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Lưu dịch vụ và upload ảnh lên Cloudinary thành công!");
         response.put("serviceId", serviceId);
         return ResponseEntity.ok(response);
     }
+
+    // PATCH IMAGES
+    @PatchMapping(value = "/{id}", consumes = { "multipart/form-data" })
+    @CheckServiceOwnership(paramName = "id")
+    public ResponseEntity<Map<String, Object>> patchImages(
+            Principal principal,
+            @PathVariable("id") Long id,
+            @RequestParam(value = "data", required = false) String dataJson, // Nhận chuỗi JSON chứa list ID ảnh cũ giữ
+                                                                             // lại
+            @RequestPart(value = "images", required = false) MultipartFile[] files) { // Nhận mảng file ảnh mới up thêm
+
+        List<Long> retainImageIds = null;
+        if (dataJson != null && !dataJson.trim().isEmpty()) {
+            try {
+                UpdateImagesRequest req = objectMapper.readValue(dataJson, UpdateImagesRequest.class);
+                retainImageIds = req.getRetainImageIds();
+            } catch (Exception e) {
+                throw new RuntimeException("Định dạng chuỗi JSON mảng ID giữ lại không hợp lệ: " + e.getMessage());
+            }
+        }
+        providerService.updateServiceImages(principal.getName(), id, retainImageIds, files);
+
+        return ResponseEntity.ok(Map.of("success", true, "message",
+                "Đồng bộ hóa dọn dẹp album ảnh và tái lập cờ hình đại diện thành công!"));
+    }
+
+    // Nhận DRAFT, ACTIVATE, SUSPENDED, DELETED từ Param (này của Services)
+    @PatchMapping("/{id}")
+    @CheckServiceOwnership(paramName = "id")
+    public ResponseEntity<Map<String, Object>> patchStatus(
+            Principal principal,
+            @PathVariable("id") Long id,
+            @RequestParam("status") String status) {
+
+        providerService.updateServiceStatus(principal.getName(), id, status);
+        return ResponseEntity.ok(Map.of("success", true, "message",
+                "Dịch chuyển trạng thái bài viết sang " + status.toUpperCase() + " thành công!"));
+    }
+
+    // LƯU CẬP NHẬT, ÉP BUỘC ACTIVATE
+    @PutMapping("/{id}")
+    @CheckServiceOwnership(paramName = "id")
+    public ResponseEntity<Map<String, Object>> updateService(
+            Principal principal, @PathVariable("id") Long id, @RequestParam("data") String dataJson) {
+
+        BaseComprehensiveRequest req = null;
+        try {
+            Map<String, Object> rawMap = objectMapper.readValue(dataJson, Map.class);
+            String serviceType = String.valueOf(rawMap.get("serviceType")).toUpperCase();
+
+            if (serviceType.contains("TOUR")) {
+                req = objectMapper.readValue(dataJson, TourComprehensiveRequest.class);
+            } else if (serviceType.contains("HOTEL")) {
+                req = objectMapper.readValue(dataJson, HotelComprehensiveRequest.class);
+            } else {
+                req = objectMapper.readValue(dataJson, TransportComprehensiveRequest.class);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi cấu trúc dữ liệu JSON đầu vào: " + e.getMessage());
+        }
+
+        providerService.updateComprehensiveService(principal.getName(), id, req);
+        return ResponseEntity.ok(Map.of("success", true, "message",
+                "Đã lưu cập nhật thành công! Bài đăng đã được kích hoạt hiển thị công khai trên sàn lữ hành!"));
+    }
+
 }

@@ -4,6 +4,7 @@
  */
 package com.qd.repository;
 
+import com.qd.enums.ItemStatus;
 import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
@@ -37,18 +38,29 @@ public interface ProviderRepository {
     void updateProvider(Providers provider);
     List<Services> getProviderServicesList(Long providerId, Map<String, String> params);
     Long countProviderServices(Long providerId,Map<String, String> params);
+
+    Services getServiceById(Long id);
     Services getServiceDetailByIdAndType(Long serviceId, ServiceType type);
+    void updateService(Services s);
+    void updateAllSellableStatusByService(Long serviceId, ItemStatus status);
+    SellableItems getSellableItemBySubItemId(Long serviceId, String targetField, Long subItemId);
     
     void saveService(Services service);
     void saveTourDetails(TourDetails tourDetails);
     void saveHotelDetails(HotelDetails hotelDetails);
     void saveTransportDetails(TransportDetails transportDetails);
-    
     void saveTourSchedule(TourItemConcs schedule);
     void saveHotelRoomItem(HotelRoomItems roomItem);
     void saveTransportTicketItem(TransportTicketItems ticketItem);
     void saveSellableItem(SellableItems sellItem);
-    
     Categories getCategoryById(Long id);
     void saveServiceImage(ServiceImages img);
+
+    void updateSingleSellableStatus(Long serviceId, String targetField, Long subItemId, ItemStatus status);
+    void removeServiceImage(ServiceImages img);
+
+    HotelRoomItems getRoomById(Long id);
+    TourItemConcs getTourScheduleById(Long id);
+    TransportTicketItems getTransportTicketById(Long id);
+    SellableItems getSellableItemById(Long id);
 }

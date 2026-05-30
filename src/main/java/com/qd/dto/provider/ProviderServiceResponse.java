@@ -20,7 +20,7 @@ public class ProviderServiceResponse {
     private String status;
     private Date createdAt;
 
-    private List<String> images;
+    private List<ImageDto> images;
 
     public ProviderServiceResponse(Services s) {
         this.id = s.getId();
@@ -31,9 +31,28 @@ public class ProviderServiceResponse {
 
         if (s.getServiceImagesSet() != null) {
             this.images = s.getServiceImagesSet().stream()
-                    .map(img -> img.getImageUrl())
+                    .map(img -> new ImageDto(img.getId(), img.getImageUrl(), img.getIsThumbnail()))
                     .collect(Collectors.toList());
         }
+    }
+
+    public static class ImageDto {
+        private Long id; 
+        private String imageUrl;
+        private Boolean isThumbnail;
+
+        public ImageDto(Long id, String imageUrl, Boolean isThumbnail) {
+            this.id = id;
+            this.imageUrl = imageUrl;
+            this.isThumbnail = isThumbnail;
+        }
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+        public Boolean getIsThumbnail() { return isThumbnail; }
+        public void setIsThumbnail(Boolean isThumbnail) { this.isThumbnail = isThumbnail; }
+        
     }
 
     /**
@@ -106,11 +125,12 @@ public class ProviderServiceResponse {
         this.createdAt = createdAt;
     }
 
-    public List<String> getImages() {
+    public List<ImageDto> getImages() {
         return images;
     }
 
-    public void setImages(List<String> images) {
+    public void setImages(List<ImageDto> images) {
         this.images = images;
-    }
 }
+}
+

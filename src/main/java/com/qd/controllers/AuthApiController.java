@@ -86,7 +86,7 @@ public class AuthApiController {
     private static final List<String> ALLOWED_EXTENSIONS = List.of("image/jpeg", "image/jpg", "image/png",
             "image/webp");
 
-    @PatchMapping("/profile/avatar")
+    @PatchMapping("/profile")
     public ResponseEntity<?> updateAvatar(@RequestParam("avatar") MultipartFile file) {
         Map<String, Object> response = new HashMap<>();
         if (file == null || file.isEmpty()) {
@@ -126,7 +126,7 @@ public class AuthApiController {
     }
 
     @CrossOrigin(origins = "*", allowedHeaders = "*")
-    @PutMapping("/profile/update")
+    @PutMapping("/profile")
     public ResponseEntity<AuthResponse> updateProfile(@RequestBody UserProfile dto,
             Authentication authentication) {
         String currentUserName = authentication.getName();
@@ -137,7 +137,7 @@ public class AuthApiController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/profile/change-password")
+    @PutMapping("/profile/password")
     public ResponseEntity<AuthResponse> changePassword(
             @RequestBody ChangePasswordRequest dto,
             Authentication authentication) {
