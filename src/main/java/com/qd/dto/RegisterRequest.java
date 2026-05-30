@@ -16,7 +16,7 @@ public class RegisterRequest {
     private String fullName;
     private String email;
     private String phone;
-    private MultipartFile avatar; //File nhị phân nằm trong DTO
+    private MultipartFile avatar; 
     private String roleType;
     
     //    -----Provider-----

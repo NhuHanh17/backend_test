@@ -67,8 +67,13 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public void save(Users user) {
         getSession().merge(user);
-//        Session session = this.factory.getObject().getCurrentSession();
-//        session.merge(user); //persist tao moi; merge de saveOrUpdate    }
+    }
+
+    @Override
+    public void saveRegister(Users user) {
+        Session session = getSession(); 
+        session.persist(user); 
+        session.flush(); 
     }
 
     @Override

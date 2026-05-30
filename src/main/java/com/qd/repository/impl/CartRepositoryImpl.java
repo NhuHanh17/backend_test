@@ -6,6 +6,7 @@ package com.qd.repository.impl;
 
 import com.qd.pojo.Carts;
 import com.qd.repository.CartRepository;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
@@ -25,11 +26,14 @@ public class CartRepositoryImpl implements CartRepository{
 
     @Autowired
     private LocalSessionFactoryBean factory;
+
     @Autowired
     private Environment env;
+
     @Override
     public void saveCart(Carts cart) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        Session session = this.factory.getObject().getCurrentSession();   
+        session.persist(cart); 
     }
     
 }
