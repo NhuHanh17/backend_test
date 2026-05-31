@@ -4,6 +4,8 @@ import java.util.Map;
 
 import com.qd.dto.provider.BaseComprehensiveRequest;
 import com.qd.dto.provider.UpdateSubItemRequest;
+import com.qd.pojo.Providers;
+
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,8 +23,10 @@ public interface ProviderService {
     void softDeleteSubItem(String username, Long serviceId, String serviceTypeStr, Long subItemId);
     void addSubItemCustom(String username, Long serviceId, String serviceTypeStr, BaseComprehensiveRequest req);
     void updateSubItem(String username,Long serviceId,String serviceTypeStr,Long subItemId,UpdateSubItemRequest req);
-    // void addSubItem(String username, Long serviceId, BaseComprehensiveRequest req);
-    // void updateSubItemStatusAndPrice(String username, Long serviceId, String type, Long subItemId, String itemStatusStr, BigDecimal price, Integer slots);
-    // void softDeleteService(String username, Long id);
-    // void updateServiceImages(String username, Long serviceId, List<Long> retainImageIds, MultipartFile[] newFiles); 
+    void updateServiceImagesAndStatusComprehensive(String username, Long serviceId, List<Long> retainImageIds, MultipartFile[] files, String status);
+
+    Map<String, Object> getOrdersByProvider(String username, Map<String, String> params) ;
+    Map<String, Object> getProviderOrderDetail(String username, Long orderId);
+    Providers findProviderByUsername(String username);
+
 }

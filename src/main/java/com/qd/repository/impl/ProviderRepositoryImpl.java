@@ -5,11 +5,13 @@
 package com.qd.repository.impl;
 
 import com.qd.enums.ItemStatus;
+import com.qd.enums.PaymentStatus;
 import com.qd.enums.ServiceStatus;
 import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
 import com.qd.pojo.HotelRoomItems;
+import com.qd.pojo.Orders;
 import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.ServiceImages;
@@ -465,6 +467,104 @@ public class ProviderRepositoryImpl implements ProviderRepository {
     @Override
     public SellableItems getSellableItemById(Long id) {
         return this.factory.getObject().getCurrentSession().get(SellableItems.class, id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Orders> getOrdersByProviderPaged(Long providerId, Map<String, String> params) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Orders> q = b.createQuery(Orders.class);
+        Root<Orders> root = q.from(Orders.class);
+
+        root.fetch("userId",JoinType.INNER);
+        root.fetch("paymentMethodId",JoinType.INNER);
+
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(b.equal(root.get("providerId").get("id"), providerId));
+        if (params != null && params.containsKey("paymentStatus") && !params.get("paymentStatus").trim().isEmpty()) {
+            predicates.add(b.equal(root.get("paymentStatus"), PaymentStatus.valueOf(params.get("paymentStatus").toUpperCase())));
+        }
+        if (params != null && params.containsKey("transactionReference") && !params.get("transactionReference").trim().isEmpty()) {
+            predicates.add(b.equal(root.get("transactionReference"), params.get("transactionReference").trim()));
+        }
+
+        q.select(root).where(predicates.toArray(new Predicate[0]));
+        q.orderBy(b.desc(root.get("createdAt"))); 
+
+        var query = session.createQuery(q);
+        String pageSizeStr = this.env.getProperty("order.page_size", "10");
+        int pageSize = Integer.parseInt(pageSizeStr);
+        int page = (params != null && params.containsKey("page")) ? Integer.parseInt(params.get("page")) : 1;
+
+        query.setFirstResult((page - 1) * pageSize);
+        query.setMaxResults(pageSize);
+
+        return query.getResultList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long countOrdersByProvider(Long providerId, Map<String, String> params) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Long> q = b.createQuery(Long.class);
+        Root<Orders> root = q.from(Orders.class);
+
+        List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+        predicates.add(b.equal(root.get("providerId").get("id"), providerId));
+
+        if (params != null && params.containsKey("paymentStatus") && !params.get("paymentStatus").trim().isEmpty()) {
+            predicates.add(b.equal(root.get("paymentStatus"), PaymentStatus.valueOf(params.get("paymentStatus").toUpperCase())));
+        }
+
+        q.select(b.count(root)).where(predicates.toArray(new Predicate[0]));
+        return session.createQuery(q).getSingleResult();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Orders getOrderByIdAndProvider(Long orderId, Long providerId) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Orders> q = b.createQuery(Orders.class);
+        Root<Orders> root = q.from(Orders.class);
+        root.fetch("userId", JoinType.INNER);
+        root.fetch("paymentMethodId", JoinType.INNER);
+        root.fetch("orderDetailsSet", JoinType.LEFT);
+
+        q.select(root).where(
+            b.equal(root.get("id"), orderId),
+            b.equal(root.get("providerId").get("id"), providerId)
+        );
+
+        try {
+            return session.createQuery(q).getSingleResult();
+        } catch (Exception e) {
+            return null; 
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Providers findProviderByUsername(String username) {
+        if (username == null || username.trim().isEmpty()) return null;
+
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Providers> q = b.createQuery(Providers.class);
+        Root<Providers> root = q.from(Providers.class);
+
+        root.fetch("userId", JoinType.INNER);
+        q.select(root).where(b.equal(root.get("userId").get("username"), username.trim()));
+
+        try {
+            var query = session.createQuery(q);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            System.err.println("Lỗi khi tìm Provider theo username: " + e.getMessage());
+            return null;
+        }
     }
 
 

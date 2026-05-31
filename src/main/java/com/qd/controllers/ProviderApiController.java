@@ -171,8 +171,7 @@ public class ProviderApiController {
                         "message", "Cập nhật item thành công!"));
     }
 
-    // POST / -> Tạo mới dịch vụ tổng thể kèm ảnh đại diện, trả về ID bài viết mới
-    // tạo để tiện chỉnh sửa tiếp
+    // Tạo mới dịch vụ tổng thể kèm ảnh đại diện, trả về ID bài viết mới
     @PostMapping(consumes = { "multipart/form-data" })
     public ResponseEntity<Map<String, Object>> saveComprehensiveService(
             Principal principal, @RequestParam("data") String dataJson,
@@ -203,42 +202,39 @@ public class ProviderApiController {
         return ResponseEntity.ok(response);
     }
 
-    // PATCH IMAGES
+
     @PatchMapping(value = "/{id}", consumes = { "multipart/form-data" })
     @CheckServiceOwnership(paramName = "id")
-    public ResponseEntity<Map<String, Object>> patchImages(
+    public ResponseEntity<Map<String, Object>> patchServiceComprehensive(
             Principal principal,
             @PathVariable("id") Long id,
-            @RequestParam(value = "data", required = false) String dataJson, // Nhận chuỗi JSON chứa list ID ảnh cũ giữ
-                                                                             // lại
-            @RequestPart(value = "images", required = false) MultipartFile[] files) { // Nhận mảng file ảnh mới up thêm
+            @RequestParam(value = "status", required = false) String status,
+            @RequestPart(value = "data", required = false) UpdateImagesRequest updateImagesReq,
+            @RequestPart(value = "images", required = false) MultipartFile[] files) {
 
-        List<Long> retainImageIds = null;
-        if (dataJson != null && !dataJson.trim().isEmpty()) {
-            try {
-                UpdateImagesRequest req = objectMapper.readValue(dataJson, UpdateImagesRequest.class);
-                retainImageIds = req.getRetainImageIds();
-            } catch (Exception e) {
-                throw new RuntimeException("Định dạng chuỗi JSON mảng ID giữ lại không hợp lệ: " + e.getMessage());
-            }
+        List<Long> retainImageIds = (updateImagesReq != null) ? updateImagesReq.getRetainImageIds() : null;
+        boolean hasImagesPayload = (retainImageIds != null && !retainImageIds.isEmpty()) || (files != null && files.length > 0);
+        boolean hasStatusPayload = (status != null && !status.trim().isEmpty());
+                
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", null);
+
+        if (hasImagesPayload && hasStatusPayload) {
+            providerService.updateServiceImagesAndStatusComprehensive(
+                    principal.getName(), id, retainImageIds, files, status);
+            response.put("message", "Đồng bộ hóa collab: Cập nhật album ảnh và chuyển trạng thái bài viết thành công!");
+        }else if (hasImagesPayload) {
+            providerService.updateServiceImages(principal.getName(), id, retainImageIds, files);
+            response.put("message", "Cập nhật album ảnh và tái lập cờ hình đại diện thành công!");
+        }else if (hasStatusPayload) {
+            providerService.updateServiceStatus(principal.getName(), id, status);
+            response.put("message", "Chuyển trạng thái bài viết sang " + status.toUpperCase() + " thành công!");
+        } else {
+            response.put("message", "Không có dữ liệu nào được thay đổi.");
         }
-        providerService.updateServiceImages(principal.getName(), id, retainImageIds, files);
 
-        return ResponseEntity.ok(Map.of("success", true, "message",
-                "Đồng bộ hóa dọn dẹp album ảnh và tái lập cờ hình đại diện thành công!"));
-    }
-
-    // Nhận DRAFT, ACTIVATE, SUSPENDED, DELETED từ Param (này của Services)
-    @PatchMapping("/{id}")
-    @CheckServiceOwnership(paramName = "id")
-    public ResponseEntity<Map<String, Object>> patchStatus(
-            Principal principal,
-            @PathVariable("id") Long id,
-            @RequestParam("status") String status) {
-
-        providerService.updateServiceStatus(principal.getName(), id, status);
-        return ResponseEntity.ok(Map.of("success", true, "message",
-                "Dịch chuyển trạng thái bài viết sang " + status.toUpperCase() + " thành công!"));
+        return ResponseEntity.ok(response);
     }
 
     // LƯU CẬP NHẬT, ÉP BUỘC ACTIVATE
@@ -266,6 +262,28 @@ public class ProviderApiController {
         providerService.updateComprehensiveService(principal.getName(), id, req);
         return ResponseEntity.ok(Map.of("success", true, "message",
                 "Đã lưu cập nhật thành công! Bài đăng đã được kích hoạt hiển thị công khai trên sàn lữ hành!"));
+    }
+
+    @GetMapping("/orders")
+    public ResponseEntity<Map<String, Object>> getProviderOrders(
+            Principal principal, @RequestParam Map<String, String> params) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", providerService.getOrdersByProvider(principal.getName(), params));
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/orders/{id}")
+    public ResponseEntity<Map<String, Object>> getProviderOrderDetail(
+            Principal principal, @PathVariable("id") Long orderId) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", providerService.getProviderOrderDetail(principal.getName(), orderId));
+        
+        return ResponseEntity.ok(response);
     }
 
 }

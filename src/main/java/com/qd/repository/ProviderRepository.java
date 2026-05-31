@@ -9,6 +9,7 @@ import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
 import com.qd.pojo.HotelRoomItems;
+import com.qd.pojo.Orders;
 import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.ServiceImages;
@@ -63,4 +64,9 @@ public interface ProviderRepository {
     TourItemConcs getTourScheduleById(Long id);
     TransportTicketItems getTransportTicketById(Long id);
     SellableItems getSellableItemById(Long id);
+
+    List<Orders> getOrdersByProviderPaged(Long providerId, Map<String, String> params);
+    Long countOrdersByProvider(Long providerId, Map<String, String> params);
+    Orders getOrderByIdAndProvider(Long orderId, Long providerId);
+    Providers findProviderByUsername(String username);
 }

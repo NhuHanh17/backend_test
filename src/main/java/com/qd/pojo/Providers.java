@@ -8,6 +8,7 @@ import jakarta.persistence.Basic;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -75,8 +76,11 @@ public class Providers implements Serializable {
     private Date approvedAt;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "providerId")
     private Set<Services> servicesSet;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "providerId")
-    private Set<ProviderOrders> providerOrdersSet;
+    // @OneToMany(cascade = CascadeType.ALL, mappedBy = "providerId")
+    // private Set<ProviderOrders> providerOrdersSet;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "providerId", fetch = FetchType.LAZY)
+    private Set<Orders> ordersSet;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @OneToOne(optional = false)
     private Users userId;
@@ -164,13 +168,13 @@ public class Providers implements Serializable {
         this.servicesSet = servicesSet;
     }
 
-    public Set<ProviderOrders> getProviderOrdersSet() {
-        return providerOrdersSet;
-    }
+    // public Set<ProviderOrders> getProviderOrdersSet() {
+    //     return providerOrdersSet;
+    // }
 
-    public void setProviderOrdersSet(Set<ProviderOrders> providerOrdersSet) {
-        this.providerOrdersSet = providerOrdersSet;
-    }
+    // public void setProviderOrdersSet(Set<ProviderOrders> providerOrdersSet) {
+    //     this.providerOrdersSet = providerOrdersSet;
+    // }
 
     public Users getUserId() {
         return userId;
@@ -219,4 +223,11 @@ public class Providers implements Serializable {
         this.statusReason = statusReason;
     }
     
+        public Set<Orders> getOrdersSet() {
+            return ordersSet;
+        }
+
+        public void setOrdersSet(Set<Orders> ordersSet) {
+            this.ordersSet = ordersSet;
+        }
 }

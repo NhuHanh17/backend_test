@@ -4,7 +4,12 @@
  */
 package com.qd.repository;
 
+import java.util.List;
+import java.util.Map;
+
+import com.qd.pojo.CartItems;
 import com.qd.pojo.Carts;
+import com.qd.pojo.SellableItems;
 
 /**
  *
@@ -12,4 +17,18 @@ import com.qd.pojo.Carts;
  */
 public interface CartRepository {
     void saveCart(Carts cart);
+
+    Carts findCartByUsername(String username);
+    List<CartItems> getCartItemsPaged(Long cartId, Map<String, String> params);
+    Long countCartItems(Long cartId);
+    CartItems findCartItemByCartAndSellableItem(Long cartId, Long sellableItemId);
+    void saveCartItem(CartItems cartItem);
+    void updateCartItem(CartItems cartItem);
+    void deleteCartItem(CartItems cartItem);
+    CartItems findCartItemById(Long id);
+
+    SellableItems findSellableItemForUpdate(Long id);
+    void updateSellableItem(SellableItems item);
+    void createOrder(com.qd.pojo.Orders order);
+    com.qd.pojo.Categories getCategoryById(Long id);
 }

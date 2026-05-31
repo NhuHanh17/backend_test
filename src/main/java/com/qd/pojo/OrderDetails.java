@@ -83,7 +83,7 @@ public class OrderDetails implements Serializable {
     @Column(name = "item_description_snapshot")
     private String itemDescriptionSnapshot;
     @JoinColumn(name = "order_id", referencedColumnName = "id")
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Orders orderId;
     @JoinColumn(name = "item_id", referencedColumnName = "id")
     @ManyToOne(optional = false)

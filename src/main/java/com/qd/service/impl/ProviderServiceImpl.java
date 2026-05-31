@@ -2,8 +2,11 @@ package com.qd.service.impl;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
@@ -23,6 +26,9 @@ import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
 import com.qd.pojo.HotelRoomItems;
+import com.qd.pojo.OrderDetails;
+import com.qd.pojo.Orders;
+import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.ServiceImages;
 import com.qd.pojo.Services;
@@ -34,6 +40,8 @@ import com.qd.pojo.Users;
 import com.qd.repository.ProviderRepository;
 import com.qd.repository.UserRepository;
 import com.qd.service.ProviderService;
+
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -426,7 +434,6 @@ public class ProviderServiceImpl implements ProviderService {
         providerRepository.saveSellableItem(sellItem);
     }
 
-    //PATCH /services/{id} đổi qua suppended
     @Override
     @Transactional
     public void updateServiceStatus(String username, Long id, String statusStr) {
@@ -439,7 +446,6 @@ public class ProviderServiceImpl implements ProviderService {
         if (ServiceStatus.DELETED.equals(currentStatus)) {
             throw new RuntimeException("Thao tác bị từ chối. Bài viết này đã bị XÓA VĨNH VIỄN (DELETED), không được phép thay đổi trạng thái nữa!");
         }
-        // nếu đang là DRAFT mà muốn chuyển sang ACTIVATE/SUSPENDED thì ok, nhưng đã từng là ACTIVATE/SUSPENDED rồi thì không DRAFT nữa
         if (newStatus == ServiceStatus.DRAFT) {
             if (currentStatus == ServiceStatus.ACTIVATE || currentStatus == ServiceStatus.SUSPENDED) {
                 throw new RuntimeException("Thao tác bị từ chối: Bài viết đã từng công khai, không thể hạ cấp quay xe về làm bản nháp (DRAFT)!");
@@ -477,7 +483,6 @@ public class ProviderServiceImpl implements ProviderService {
             }
     }
 
-    //PUT /services/{id} -> Update -> CHUYỂN SANG PUBLISH
     @Override
     @Transactional
     public void updateComprehensiveService(String username, Long id, BaseComprehensiveRequest req) {
@@ -679,7 +684,7 @@ public class ProviderServiceImpl implements ProviderService {
 
         Set<ServiceImages> currentImages = service.getServiceImagesSet();
         if (currentImages != null && !currentImages.isEmpty()) {
-            java.util.Iterator<ServiceImages> iterator = currentImages.iterator();
+            Iterator<ServiceImages> iterator = currentImages.iterator();
             while (iterator.hasNext()) {
                 ServiceImages img = iterator.next();
                                 if (retainImageIds == null || !retainImageIds.contains(img.getId())) {
@@ -702,28 +707,39 @@ public class ProviderServiceImpl implements ProviderService {
             }
         }
 
+        boolean hasExistingThumbnail = false;
+        if (service.getServiceImagesSet() != null) {
+            hasExistingThumbnail = service.getServiceImagesSet().stream()
+                    .anyMatch(img -> img.getIsThumbnail() != null && img.getIsThumbnail());
+        }
+
         if (newFiles != null && newFiles.length > 0) {
+            if (service.getServiceImagesSet() == null) {
+                service.setServiceImagesSet(new HashSet<>());
+            }
+
+            boolean isFirstSlot = !hasExistingThumbnail;
             for (MultipartFile file : newFiles) {
                 if (file != null && !file.isEmpty()) {
                     try {
                         Map uploadResult = cloudinary.uploader().upload(
-                                file.getBytes(),
-                                com.cloudinary.utils.ObjectUtils.emptyMap()
-                        );
+                                file.getBytes(),ObjectUtils.emptyMap());
                         String secureUrl = (String) uploadResult.get("secure_url");
 
                         ServiceImages newImg = new ServiceImages();
                         newImg.setServiceId(service);
                         newImg.setImageUrl(secureUrl);
-                        newImg.setIsThumbnail(false); 
-                        
-                        providerRepository.saveServiceImage(newImg);
-                        if (service.getServiceImagesSet() == null) {
-                            service.setServiceImagesSet(new HashSet<>());
+                       if (isFirstSlot) {
+                            newImg.setIsThumbnail(true);
+                            isFirstSlot = false; 
+                        } else {
+                            newImg.setIsThumbnail(false);
                         }
-                        service.getServiceImagesSet().add(newImg); 
-                    } catch (java.io.IOException e) {
-                        throw new RuntimeException("Lỗi cơ học đường truyền khi upload mảng file mới!");
+
+                        providerRepository.saveServiceImage(newImg);
+                        service.getServiceImagesSet().add(newImg);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Lỗi đường truyền khi upload mảng file mới!");
                     }
                 }
             }
@@ -733,13 +749,23 @@ public class ProviderServiceImpl implements ProviderService {
         if (aliveImages != null && !aliveImages.isEmpty()) {
             boolean hasThumbnail = aliveImages.stream().anyMatch(img -> img.getIsThumbnail() != null && img.getIsThumbnail());
             if (!hasThumbnail) {
-                ServiceImages firstImg = aliveImages.iterator().next();
-                firstImg.setIsThumbnail(true);
-                providerRepository.updateService(service); 
-            }
+                ServiceImages rescueImg = aliveImages.iterator().next();
+                rescueImg.setIsThumbnail(true);
+                providerRepository.saveServiceImage(rescueImg);
         }
     }
 
+                     providerRepository.updateService(service); 
+    }
+
+
+    @Override
+    @Transactional 
+    public void updateServiceImagesAndStatusComprehensive(String username, Long serviceId, List<Long> retainImageIds, MultipartFile[] files, String status) {
+        
+        this.updateServiceImages(username, serviceId, retainImageIds, files);
+        this.updateServiceStatus(username, serviceId, status);
+    }
 
     @Override
     @Transactional
@@ -850,5 +876,107 @@ public class ProviderServiceImpl implements ProviderService {
         }
     }
 }
+
+@Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getOrdersByProvider(String username, Map<String, String> params) {
+        Providers provider = this.findProviderByUsername(username); 
+        if (provider == null) throw new RuntimeException("Lỗi bảo mật: Bạn không phải là Đối tác hợp lệ!");
+
+        List<Orders> list = providerRepository.getOrdersByProviderPaged(provider.getId(), params);
+        Long totalElements = providerRepository.countOrdersByProvider(provider.getId(), params);
+
+        List<Map<String, Object>> content = list.stream().map(o -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderId", o.getId());
+            map.put("totalAmount", o.getTotalAmount());
+            map.put("paymentStatus", o.getPaymentStatus().toString());
+            map.put("createdAt", o.getCreatedAt().getTime());
+            map.put("transactionReference", o.getTransactionReference());
+            map.put("paymentMethod", o.getPaymentMethodId().getMethodName()); // Phương thức TT: PAYPAL, MOMO, CASH
+            
+            map.put("customerName", o.getUserId().getFullName());
+            map.put("customerPhone", o.getUserId().getPhone());
+            return map;
+        }).collect(Collectors.toList());
+
+        int pageSize = Integer.parseInt(this.env.getProperty("provider.order.page_size", "10"));
+        int currentPage = (params != null && params.containsKey("page")) ? Integer.parseInt(params.get("page")) : 1;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", content);
+        result.put("totalElements", totalElements);
+        result.put("page", currentPage);
+        result.put("size", pageSize);
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getProviderOrderDetail(String username, Long orderId) {
+        Providers provider = this.findProviderByUsername(username);
+        if (provider == null) throw new RuntimeException("Lỗi: Bạn không có quyền truy cập!");
+
+        Orders o = providerRepository.getOrderByIdAndProvider(orderId, provider.getId());
+        if (o == null) throw new RuntimeException("Đơn hàng không tồn tại hoặc không thuộc quyền sở hữu quản lý của bạn!");
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderId", o.getId());
+        data.put("totalAmount", o.getTotalAmount());
+        data.put("paymentStatus", o.getPaymentStatus().toString());
+        data.put("transactionReference", o.getTransactionReference());
+        data.put("createdAt", o.getCreatedAt());
+
+        data.put("paymentMethodName", o.getPaymentMethodId().getMethodName());
+        
+        Map<String, Object> customer = new HashMap<>();
+        customer.put("customerId", o.getUserId().getId());
+        customer.put("fullName", o.getUserId().getFullName());
+        customer.put("email", o.getUserId().getEmail());
+        customer.put("phone", o.getUserId().getPhone());
+        customer.put("address", o.getUserId().getAddress());
+        data.put("customerInfo", customer); 
+
+        List<Map<String, Object>> detailsList = new ArrayList<>();
+        if (o.getOrderDetailsSet() != null) {
+            for (OrderDetails od : o.getOrderDetailsSet()) {
+                Map<String, Object> odMap = new HashMap<>();
+                odMap.put("detailId", od.getId());
+                odMap.put("quantity", od.getQuantity());
+                odMap.put("priceSnapshot", od.getPrice()); 
+                odMap.put("bookingStatus", od.getBookingStatus().toString());
+                
+                odMap.put("serviceNameSnapshot", od.getServiceNameSnapshot());
+                odMap.put("providerNameSnapshot", od.getProviderNameSnapshot());
+                odMap.put("itemDescriptionSnapshot", od.getItemDescriptionSnapshot());
+                
+                detailsList.add(odMap);
+            }
+        }
+        data.put("orderDetailsList", detailsList);
+
+        return data;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Providers findProviderByUsername(String username) {
+        return this.providerRepository.findProviderByUsername(username);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }

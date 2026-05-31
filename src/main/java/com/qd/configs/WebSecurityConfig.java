@@ -66,7 +66,9 @@
 // .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
 // .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
 // .requestMatchers(new
-// AntPathRequestMatcher("/api/customer/services/**")).permitAll()
+// AntPathRequestMatcher("/api/services/cart/**")).permitAll()
+// .requestMatchers(new AntPathRequestMatcher("/api/customer/**",
+// "GET")).permitAll()
 
 // // 2. Nhóm Admin Site
 // .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
@@ -144,7 +146,7 @@ public class WebSecurityConfig {
         // http.cors(cors -> cors.disable())
         // .csrf(csrf -> csrf.disable())
         // .sessionManagement(session ->
-        // session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));STATELESS;
+        // session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         // .authorizeHttpRequests(auth -> auth
         // .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()

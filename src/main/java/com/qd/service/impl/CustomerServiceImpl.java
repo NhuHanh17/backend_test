@@ -1,5 +1,7 @@
 package com.qd.service.impl;
 
+import com.qd.enums.ItemStatus;
+import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.OrderDetails;
 import com.qd.pojo.SellableItems;
@@ -93,14 +95,14 @@ public class CustomerServiceImpl implements CustomerService{
         data.put("bookingCount", s.getBookingCount());
         data.put("averageRating", s.getAverageRating());
 
-        if (s.getServiceType() == com.qd.enums.ServiceType.HOTEL && s.getHotelDetails() != null) {
+        if (s.getServiceType() == ServiceType.HOTEL && s.getHotelDetails() != null) {
             Map<String, Object> hotel = new HashMap<>();
             hotel.put("starRating", s.getHotelDetails().getStarRating());
             hotel.put("address", s.getHotelDetails().getAddress());
             hotel.put("city", s.getHotelDetails().getCity());
             hotel.put("amenities", s.getHotelDetails().getAmenities());
             data.put("hotelDetails", hotel);
-        } else if (s.getServiceType() == com.qd.enums.ServiceType.TOUR && s.getTourDetails() != null) {
+        } else if (s.getServiceType() == ServiceType.TOUR && s.getTourDetails() != null) {
             Map<String, Object> tour = new HashMap<>();
             tour.put("departure", s.getTourDetails().getDepartureLocation());
             tour.put("destination", s.getTourDetails().getDestinationLocation());
@@ -119,52 +121,53 @@ public class CustomerServiceImpl implements CustomerService{
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> getServiceSubItemsAndReviews(Long id) {
+    public Map<String, Object> getServiceSubItems(Long id) {
         Services s = providerRepository.getServiceById(id);
-        if (s == null) throw new RuntimeException("Dịch vụ không tồn tại!");
+        if (s == null) throw new RuntimeException("Lỗi: Dịch vụ lữ hành không tồn tại trên hệ thống!");
         
-        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> subItems = new ArrayList<>();
+        
+        if (s.getSellableItemsSet() != null && !s.getSellableItemsSet().isEmpty()) {
+            subItems = s.getSellableItemsSet().stream()
+                .filter(item -> ItemStatus.AVAILABLE.equals(item.getItemStatus()))
+                .map(item -> {
+                    Map<String, Object> itemMap = new HashMap<>();
+                    itemMap.put("sellableItemId", item.getId());
+                    itemMap.put("price", item.getPrice());
+                    
+                    itemMap.put("availableSlots", item.getAvailableSlots());
+                    itemMap.put("itemStatus", item.getItemStatus().toString());
+                       
+                    if (item.getHotelRoomItemId() != null) {
+                        var hotelRoom = item.getHotelRoomItemId();
+                        itemMap.put("subItemName", hotelRoom.getRoomType()); // Varchar(100)
+                        itemMap.put("details", "Sức chứa: " + hotelRoom.getCapacity() 
+                                + " người - Giường: " + hotelRoom.getBedType() 
+                                + " - Diện tích: " + hotelRoom.getRoomSizeM2() + "m²");
+                    } 
+                    
+                    else if (item.getTourItemConcId() != null) {
+                        var tourDetail = item.getTourItemConcId();
+                        itemMap.put("subItemName", "Lịch trình khởi hành Tour lẻ");
+                        itemMap.put("details", "Khởi hành: " + tourDetail.getDepartureTime() 
+                                + " - Giới hạn: " + tourDetail.getMaxParticipants() + " khách/đoàn");
+                    } 
+                                        else if (item.getTransportTicketItemId() != null) {
+                        var transTicket = item.getTransportTicketItemId();
+                        itemMap.put("subItemName", "Vé tuyến lữ hành hành trình");
+                        itemMap.put("details", "Hạng chỗ: " + transTicket.getSeatClass() 
+                                + " - Xuất bến lúc: " + transTicket.getDepartureTime());
+                    }
+                    
+                    return itemMap;
+                }).collect(Collectors.toList());
+        }
 
-        List<Map<String, Object>> subItems = s.getSellableItemsSet().stream()
-            .filter(item -> com.qd.enums.ItemStatus.AVAILABLE.equals(item.getItemStatus()))
-            .map(item -> {
-                Map<String, Object> itemMap = new HashMap<>();
-                itemMap.put("sellableItemId", item.getId());
-                itemMap.put("price", item.getPrice());
-                itemMap.put("availableSlots", item.getAvailableSlots());
-                
-                if (item.getHotelRoomItemId() != null) {
-                    itemMap.put("subItemName", item.getHotelRoomItemId().getRoomType());
-                    itemMap.put("details", "Sức chứa: " + item.getHotelRoomItemId().getCapacity() + " giường: " + item.getHotelRoomItemId().getBedType());
-                } else if (item.getTourItemConcId() != null) {
-                    itemMap.put("subItemName", "Lịch lịch trình khởi hành lẻ");
-                    itemMap.put("details", "Khởi hành: " + item.getTourItemConcId().getDepartureTime());
-                }
-                return itemMap;
-            }).collect(Collectors.toList());
+        Map<String, Object> result = new HashMap<>();
         result.put("sellableGiaoDienList", subItems);
 
-        List<Map<String, Object>> feedbackList = new ArrayList<>();
-        if (s.getSellableItemsSet() != null) {
-            for (SellableItems item : s.getSellableItemsSet()) {
-                if (item.getOrderDetailsSet() != null) {
-                    for (OrderDetails od : item.getOrderDetailsSet()) {
-                        if (od.getReviews() != null) {
-                            Map<String, Object> rMap = new HashMap<>();
-                            rMap.put("reviewId", od.getReviews().getId());
-                            rMap.put("ratingStar", od.getReviews().getRating());
-                            rMap.put("commentText", od.getReviews().getComment());
-                            rMap.put("clientName", od.getReviews().getUserId().getFullName());
-                            rMap.put("reviewDate", od.getReviews().getCreatedAt());
-                            feedbackList.add(rMap);
-                        }
-                    }
-                }
-            }
-        }
-        result.put("customerReviewsFeedback", feedbackList);
         return result;
-    }
+        }
 
 
 }

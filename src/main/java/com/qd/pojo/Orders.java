@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.Set;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 
 /**
  *
@@ -66,8 +67,13 @@ public class Orders implements Serializable {
     private Date createdAt;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "orderId")
     private Set<OrderDetails> orderDetailsSet;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "orderId")
-    private Set<ProviderOrders> providerOrdersSet;
+    // @OneToMany(cascade = CascadeType.ALL, mappedBy = "orderId")
+    // private Set<ProviderOrders> providerOrdersSet;
+
+    @JoinColumn(name = "provider_id", referencedColumnName = "id")
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    private Providers providerId;
+
     @JoinColumn(name = "payment_method_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private PaymentMethods paymentMethodId;
@@ -128,13 +134,13 @@ public class Orders implements Serializable {
         this.orderDetailsSet = orderDetailsSet;
     }
 
-    public Set<ProviderOrders> getProviderOrdersSet() {
-        return providerOrdersSet;
-    }
+    // public Set<ProviderOrders> getProviderOrdersSet() {
+    //     return providerOrdersSet;
+    // }
 
-    public void setProviderOrdersSet(Set<ProviderOrders> providerOrdersSet) {
-        this.providerOrdersSet = providerOrdersSet;
-    }
+    // public void setProviderOrdersSet(Set<ProviderOrders> providerOrdersSet) {
+    //     this.providerOrdersSet = providerOrdersSet;
+    // }
 
     public PaymentMethods getPaymentMethodId() {
         return paymentMethodId;
@@ -191,4 +197,17 @@ public class Orders implements Serializable {
         this.paymentStatus = paymentStatus;
     }
     
+    /**
+     * @return the providerId
+     */
+    public Providers getProviderId() {
+        return providerId;
+    }
+
+    /**
+     * @param providerId the providerId to set
+     */
+    public void setProviderId(Providers providerId) {
+        this.providerId = providerId;
+    }
 }
