@@ -106,6 +106,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -164,9 +165,10 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Cấu hình các domain được phép truy cập
-        configuration.setAllowedOrigins(Arrays.asList(
+        config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "https://backend-mwvp.onrender.com"));
+                "https://travel-vista-frontend-ten.vercel.app",
+        ));
 
         // Cho phép tất cả các HTTP Methods phổ biến (GET, POST, PUT, DELETE,...)
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
