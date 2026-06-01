@@ -4,6 +4,7 @@
  */
 package com.qd.repository.impl;
 
+import com.qd.pojo.CartItems;
 import com.qd.pojo.OrderDetails;
 import com.qd.pojo.Orders;
 import com.qd.pojo.PaymentMethods;
@@ -27,29 +28,48 @@ public class CheckoutRepositoryImpl implements CheckoutRepository{
     
     @Autowired
     private LocalSessionFactoryBean factory;
-
+    
+    @Override
     public SellableItems findSellableItemById(Long id) {
-        Session session = this.factory.getObject().getCurrentSession();
-        return session.get(SellableItems.class, id);
+        return this.factory.getObject().getCurrentSession().get(SellableItems.class, id);
     }
 
+    @Override
+    public CartItems findCartItemById(Long id) {
+        return this.factory.getObject().getCurrentSession().get(CartItems.class, id);
+    }
+    
+    @Override
     public PaymentMethods findPaymentMethodById(Long id) {
-        Session session = this.factory.getObject().getCurrentSession();
-        return session.get(PaymentMethods.class, id);
+        return this.factory.getObject().getCurrentSession().get(PaymentMethods.class, id);
     }
-
+    
+    @Override
     public void saveOrder(Orders order) {
-        Session session = this.factory.getObject().getCurrentSession();
-        session.persist(order);
+        this.factory.getObject().getCurrentSession().persist(order);
     }
-
+    
+    @Override
     public void saveOrderDetail(OrderDetails detail) {
-        Session session = this.factory.getObject().getCurrentSession();
-        session.persist(detail);
+        this.factory.getObject().getCurrentSession().persist(detail);
     }
 
+    @Override
     public void updateSellableItem(SellableItems item) {
-        Session session = this.factory.getObject().getCurrentSession();
-        session.merge(item);
+        this.factory.getObject().getCurrentSession().merge(item);
+    }
+
+    @Override
+    public void deleteCartItem(CartItems cartItem) {
+        this.factory.getObject().getCurrentSession().remove(cartItem);
+    }
+
+    @Override
+    public Orders findOrderById(Long id) {
+    return this.factory.getObject().getCurrentSession().get(Orders.class, id);
+}
+    @Override
+    public void updateOrder(Orders order) {
+        this.factory.getObject().getCurrentSession().merge(order);
     }
 }

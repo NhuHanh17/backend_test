@@ -9,6 +9,11 @@ import com.qd.dto.customer.CheckoutRequest;
 import com.qd.enums.BookingStatus;
 import com.qd.enums.ItemStatus;
 import com.qd.enums.PaymentStatus;
+import com.qd.pattern.FreePayment;
+import com.qd.pattern.MomoPayment;
+import com.qd.pattern.PaymentStrategy;
+import com.qd.pattern.PaypalPayment;
+import com.qd.pojo.CartItems;
 import com.qd.pojo.OrderDetails;
 import com.qd.pojo.Orders;
 import com.qd.pojo.PaymentMethods;
@@ -16,11 +21,14 @@ import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.Services;
 import com.qd.pojo.Users;
-import com.qd.repository.impl.CheckoutRepositoryImpl;
+import com.qd.repository.CheckoutRepository;
 import com.qd.service.CheckoutService;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,98 +38,144 @@ import org.springframework.transaction.annotation.Transactional;
  * @author ADMIN
  */
 @Service
-public class CheckoutServiceImpl implements CheckoutService{
+public class CheckoutServiceImpl implements CheckoutService {
 
     @Autowired
-    private CheckoutRepositoryImpl checkoutRepository;
-
-    @Transactional(readOnly = true)
-    public BigDecimal calculateSummaryAndValidate(List<CartItemRequest> itemRequests) {
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        Long targetProviderId = null;
-
-        for (CartItemRequest req : itemRequests) {
-            SellableItems item = checkoutRepository.findSellableItemById(req.getItemId());
-            if (item == null) {
-                throw new RuntimeException("Sản phẩm có ID " + req.getItemId() + " không tồn tại!");
-            }
-
-            if (item.getItemStatus() != ItemStatus.AVAILABLE) {
-                throw new RuntimeException("Sản phẩm '" 
-                        + item.getServiceId().getName() + "' hiện đã ngưng bán hoặc cháy vé! (Trạng thái: " + item.getItemStatus() + ")!");
-            }
-
-            Services service = item.getServiceId();
-            Providers currentProvider = service.getProviderId();
-            Long currentProviderId = currentProvider.getId();
-
-            if (targetProviderId == null) {
-                targetProviderId = currentProviderId; 
-            } else if (!targetProviderId.equals(currentProviderId)) {
-                throw new RuntimeException("Hệ thống phát hiện có sản phẩm lệch Provider trong giỏ! Vui lòng tách đơn!");
-            }
-
-            if (item.getAvailableSlots() < req.getQuantity()) {
-                throw new RuntimeException("Dịch vụ '" + service.getName() + "' chỉ còn" + item.getAvailableSlots() + " chỗ trống!");
-            }
-
-            BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(req.getQuantity()));
-            totalAmount = totalAmount.add(itemTotal);
-        }
-
-        return totalAmount;
-    }
-
+    private CheckoutRepository checkoutRepository;
 
     @Transactional
-    public Orders placeOrder(Users buyer, CheckoutRequest req) {
-        BigDecimal finalTotalAmount = calculateSummaryAndValidate(req.getItems());
-
-        // 🛑 Bước B: Kiểm chứng hình thức thanh toán
-        PaymentMethods paymentMethod = checkoutRepository.findPaymentMethodById(req.getPaymentMethodId());
-        if (paymentMethod == null) {
-            throw new RuntimeException("Phương thức thanh toán không hợp lệ!");
+    @Override
+    public Map<String, Object> executeCheckout(Users buyer, CheckoutRequest req) {
+        List<CartItemRequest> normalizedItems = new ArrayList<>();
+        List<CartItems> cartItemsToDelete = new ArrayList<>();
+         if (req.getIsBuyNow()) {
+            if (req.getItemId() == null || req.getQuantity() == null || req.getQuantity() <= 0) 
+                throw new RuntimeException("Thiếu dữ liệu sản phẩm hoặc số lượng!");
+            
+            CartItemRequest itemReq = new CartItemRequest();
+            itemReq.setItemId(req.getItemId());
+            itemReq.setQuantity(req.getQuantity());
+            normalizedItems.add(itemReq);
+        } else {
+            if (req.getCartItemIds() == null || req.getCartItemIds().isEmpty()) {
+                throw new RuntimeException("Danh sách chọn thanh toán từ giỏ hàng trống!");
+            }
+            for (Long cartItemId : req.getCartItemIds()) {
+                CartItems cartItem = checkoutRepository.findCartItemById(cartItemId);
+                if (cartItem == null) {
+                    throw new RuntimeException("item trong giỏ hàng không tồn tại id " + cartItemId);
+                }
+                CartItemRequest itemReq = new CartItemRequest();
+                itemReq.setItemId(cartItem.getItemId().getId());
+                itemReq.setQuantity(cartItem.getQuantity());
+                normalizedItems.add(itemReq);
+                cartItemsToDelete.add(cartItem);
+            }
         }
-        
-        SellableItems firstItem = checkoutRepository.findSellableItemById(req.getItems().get(0).getItemId());
-        Providers orderProvider = firstItem.getServiceId().getProviderId();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        Long targetProviderId = null;
+        Providers orderProvider = null;
 
-        Orders order = new Orders();
+        for (CartItemRequest itemReq : normalizedItems) {
+            SellableItems item = checkoutRepository.findSellableItemById(itemReq.getItemId());
+            if (item == null)
+                throw new RuntimeException("item không tồn tại! " + itemReq.getItemId());
+            if (item.getItemStatus() != ItemStatus.AVAILABLE) 
+                throw new RuntimeException("Sản phẩm không khả dụng để đặt'" + item.getServiceId().getName());
+            
+            Long currentProviderId = item.getServiceId().getProviderId().getId();
+            if (targetProviderId == null) {
+                targetProviderId = currentProviderId;
+                orderProvider = item.getServiceId().getProviderId();
+            } else if (!targetProviderId.equals(currentProviderId)) 
+                throw new RuntimeException("Các sản phẩm không cùng một nhà cung cấp! ");
+            
+            if (item.getAvailableSlots() < itemReq.getQuantity()) 
+                throw new RuntimeException("Dịch vụ không đủ số lượng " + item.getServiceId().getName());
+
+            BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            totalAmount = totalAmount.add(itemTotal);
+        }
+   PaymentMethods paymentMethod = null;
+        boolean isFree = totalAmount.compareTo(BigDecimal.ZERO) == 0;
+
+        if (isFree) {
+            paymentMethod = checkoutRepository.findPaymentMethodById(6L);
+        } else {
+            if (req.getPaymentMethodId() == null) {
+                throw new RuntimeException("Đơn hàng có phí bắt buộc chọn Phương thức thanh toán!");
+            }
+            paymentMethod = checkoutRepository.findPaymentMethodById(req.getPaymentMethodId());
+            if (paymentMethod == null)
+                throw new RuntimeException("Hãy chọn phương thức thanh toán hợp lệ!");
+        }
+    Orders order = new Orders();
         order.setUserId(buyer);
         order.setProviderId(orderProvider);
-        order.setTotalAmount(finalTotalAmount);
-        order.setPaymentStatus(PaymentStatus.PENDING); 
-        order.setTransactionReference(req.getTransactionReference());
+        order.setTotalAmount(totalAmount);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setPaymentMethodId(paymentMethod); 
         order.setCreatedAt(new Date());
-
+        
         checkoutRepository.saveOrder(order); 
 
-        for (CartItemRequest itemReq : req.getItems()) {
+        for (CartItemRequest itemReq : normalizedItems) {
             SellableItems item = checkoutRepository.findSellableItemById(itemReq.getItemId());
-            Services service = item.getServiceId();
-
             int newSlots = item.getAvailableSlots() - itemReq.getQuantity();
             item.setAvailableSlots(newSlots);
+            if (newSlots == 0)  item.setItemStatus(ItemStatus.OUT_OF_STOCK);
             
-            if (newSlots == 0) {
-                item.setItemStatus(ItemStatus.OUT_OF_STOCK);
-            }
-            checkoutRepository.updateSellableItem(item); 
-
+            checkoutRepository.updateSellableItem(item);
             OrderDetails detail = new OrderDetails();
             detail.setOrderId(order);
             detail.setItemId(item);
             detail.setQuantity(itemReq.getQuantity());
-            detail.setPrice(item.getPrice()); 
+            detail.setPrice(item.getPrice());
+
             detail.setBookingStatus(BookingStatus.BOOKED);
-            detail.setServiceNameSnapshot(service.getName());
+            detail.setServiceNameSnapshot(item.getServiceId().getName());
             detail.setProviderNameSnapshot(orderProvider.getCompanyName());
             detail.setCreatedAt(new Date());
 
             checkoutRepository.saveOrderDetail(detail);
         }
 
-        return order;
+        if (!cartItemsToDelete.isEmpty()) {
+            for (CartItems cartItem : cartItemsToDelete) {
+                checkoutRepository.deleteCartItem(cartItem);
+            }
+        }
+        PaymentStrategy strategy;
+        if (isFree) {
+            strategy = new FreePayment(); 
+        } else {
+            String methodName = paymentMethod.getMethodName().toUpperCase();
+            if (methodName.contains("MOMO")) {
+                strategy = new MomoPayment();
+            } else if (methodName.contains("PAYPAL")) {
+                strategy = new PaypalPayment();
+            } else 
+                throw new RuntimeException("Chưa tích hợp phương thức thanh toán này!");
+        }
+
+        Map<String, Object> strategyResult = strategy.processPayment(order);
+        Map<String, Object> finalResult = new HashMap<>(strategyResult);
+        finalResult.put("orderId", order.getId());
+        finalResult.put("totalAmount", order.getTotalAmount());
+        finalResult.put("paymentStatus", order.getPaymentStatus().toString());
+        return finalResult;
+    }
+
+    @Transactional
+    @Override
+    public void fulfillOrderAfterPayment(Long orderId, String transactionRef) {
+        Orders order = checkoutRepository.findOrderById(orderId);
+        if (order == null) {
+            throw new RuntimeException(
+                    "Không tìm thấy đơn hàng ID để hoàn tất thanh toán" + orderId );
+        }
+        order.setPaymentStatus(PaymentStatus.PAY);
+        order.setTransactionReference(transactionRef);
+        checkoutRepository.updateOrder(order);
     }
 }
-

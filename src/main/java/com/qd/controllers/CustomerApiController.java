@@ -1,9 +1,14 @@
 package com.qd.controllers;
 
+import com.qd.dto.customer.CheckoutRequest;
 import com.qd.pojo.Reviews;
+import com.qd.pojo.Users;
 import com.qd.service.CartService;
+import com.qd.service.CheckoutService;
 import com.qd.service.CustomerService;
 import com.qd.service.ReviewService;
+import com.qd.service.UserService;
+import com.qd.service.impl.CheckoutServiceImpl;
 
 import java.security.Principal;
 import java.util.HashMap;
@@ -36,6 +41,12 @@ public class CustomerApiController {
 
     @Autowired
     private ReviewService reviewService;
+
+    @Autowired
+    private CheckoutService checkoutService;
+
+    @Autowired
+    private UserService userService;
     
     @GetMapping
     public ResponseEntity<Map<String, Object>> getServicesForHomepage(@RequestParam Map<String, String> params) {
@@ -148,7 +159,44 @@ public class CustomerApiController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/orders")
+    public ResponseEntity<Map<String, Object>> processPlaceOrder(
+            Principal principal, @RequestBody CheckoutRequest req) {
+        try {
+            Users buyer = userService.findByUsername(principal.getName());
+            Map<String, Object> checkoutResult = checkoutService.executeCheckout(buyer, req);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", checkoutResult,
+                "message", "Checkout TravelVista thành công!"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
    
+    @PostMapping("/callback")
+    public ResponseEntity<Map<String, Object>> handlePaymentWebhook(@RequestBody Map<String, Object> payload) {
+        try {
+            Long orderId = Long.parseLong(payload.get("orderId").toString());
+            String transactionRef = payload.get("transactionReference").toString();
+            String responseCode = payload.get("responseCode").toString(); // "00" là thành công bên MoMo
+
+            if ("00".equals(responseCode) || "SUCCESS".equalsIgnoreCase(responseCode)) {
+                checkoutService.fulfillOrderAfterPayment(orderId, transactionRef);
+                
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Đã nhận dữ liệu IPN/Webhook thành công! Đơn hàng đã chuyển trạng thái sang PAY!"
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Giao dịch thất bại!"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
 
 
 

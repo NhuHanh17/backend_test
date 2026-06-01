@@ -2,25 +2,74 @@ package com.qd.dto.customer;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class CheckoutRequest {
-    private List<CartItemRequest> items;
+    @JsonProperty("buyNow")
+    private boolean isBuyNow; 
+    
+    private Long itemId;
+    private Integer quantity;
+    private List<Long> cartItemIds;
     private Long paymentMethodId;
-    private String transactionReference;
 
     public CheckoutRequest() {}
 
     /**
-     * @return the items
+     * @return the isBuyNow
      */
-    public List<CartItemRequest> getItems() {
-        return items;
+    public boolean getIsBuyNow() {
+        return isBuyNow;
+    }
+
+    
+    /**
+     * @param isBuyNow the isBuyNow to set
+     */
+    public void setIsBuyNow(boolean isBuyNow) {
+        this.isBuyNow = isBuyNow;
     }
 
     /**
-     * @param items the items to set
+     * @return the itemId
      */
-    public void setItems(List<CartItemRequest> items) {
-        this.items = items;
+    public Long getItemId() {
+        return itemId;
+    }
+
+    /**
+     * @param itemId the itemId to set
+     */
+    public void setItemId(Long itemId) {
+        this.itemId = itemId;
+    }
+
+    /**
+     * @return the quantity
+     */
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    /**
+     * @param quantity the quantity to set
+     */
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    /**
+     * @return the cartItemIds
+     */
+    public List<Long> getCartItemIds() {
+        return cartItemIds;
+    }
+
+    /**
+     * @param cartItemIds the cartItemIds to set
+     */
+    public void setCartItemIds(List<Long> cartItemIds) {
+        this.cartItemIds = cartItemIds;
     }
 
     /**
@@ -37,19 +86,6 @@ public class CheckoutRequest {
         this.paymentMethodId = paymentMethodId;
     }
 
-    /**
-     * @return the transactionReference
-     */
-    public String getTransactionReference() {
-        return transactionReference;
-    }
-
-    /**
-     * @param transactionReference the transactionReference to set
-     */
-    public void setTransactionReference(String transactionReference) {
-        this.transactionReference = transactionReference;
-    }
-
+    
     
 }
