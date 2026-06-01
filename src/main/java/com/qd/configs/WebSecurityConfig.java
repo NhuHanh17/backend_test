@@ -85,10 +85,10 @@
 
 package com.qd.configs;
 
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -103,7 +103,9 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -120,21 +122,12 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // http.cors(cors -> cors.disable())
-        // .csrf(csrf -> csrf.disable())
-        // .sessionManagement(session ->
-        // session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-        // .authorizeHttpRequests(auth -> auth
-        // .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()
-        // );
-
-        http.cors(cors -> cors.disable())
+        // Cấu hình CORS sử dụng Bean corsConfigurationSource bên dưới
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
@@ -145,9 +138,6 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
-
-                        // .requestMatchers(new
-                        // AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                         .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
@@ -171,31 +161,25 @@ public class WebSecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
+        // Cấu hình các domain được phép truy cập
+        configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                "https://travel-vista-frontend-ten.vercel.app/"));
+                "https://backend-mwvp.onrender.com"));
 
-        config.setAllowedMethods(List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "OPTIONS"));
+        // Cho phép tất cả các HTTP Methods phổ biến (GET, POST, PUT, DELETE,...)
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept"));
+        // Cho phép tất cả các Headers (Authorization, Content-Type,...)
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
 
-        config.setAllowCredentials(true);
+        // Cho phép gửi kèm Credentials (ví dụ: Cookies, JWT trong header,...)
+        configuration.setAllowCredentials(true);
 
+        // Áp dụng cấu hình CORS này cho toàn bộ các endpoint (/**)
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration("/**", config);
-
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
