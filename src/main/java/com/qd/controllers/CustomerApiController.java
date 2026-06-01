@@ -1,11 +1,15 @@
 package com.qd.controllers;
 
+import com.qd.pojo.Reviews;
 import com.qd.service.CartService;
 import com.qd.service.CustomerService;
+import com.qd.service.ReviewService;
 
 import java.security.Principal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +33,9 @@ public class CustomerApiController {
 
     @Autowired
     private CartService cartService;
+
+    @Autowired
+    private ReviewService reviewService;
     
     @GetMapping
     public ResponseEntity<Map<String, Object>> getServicesForHomepage(@RequestParam Map<String, String> params) {
@@ -37,6 +44,36 @@ public class CustomerApiController {
         response.put("data", customerService.getServicesForCustomer(params));
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{serviceId}/reviews")
+    public ResponseEntity<Map<String, Object>> getServiceReviews(
+            @PathVariable("serviceId") Long serviceId,
+            @RequestParam Map<String, String> params) { 
+        
+        List<Reviews> reviewsList = reviewService.getReviewsByServicePaged(serviceId, params);
+        
+        List<Map<String, Object>> reviewsFeedback = reviewsList.stream().map(r -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("reviewId", r.getId());
+            map.put("clientName", r.getUserId().getFullName());
+            map.put("reviewDate", r.getCreatedAt().getTime());
+            map.put("commentText", r.getComment());
+            map.put("ratingStar", r.getRating());
+            
+            map.put("subItemSnapshot", r.getOrderDetailId().getServiceNameSnapshot());
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", Map.of(
+            "customerReviewsFeedback", reviewsFeedback,
+            "page", params.getOrDefault("page", "1")
+        ));
+        
+        return ResponseEntity.ok(response);
+    }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getServiceMainDetail(@PathVariable("id") Long id) {

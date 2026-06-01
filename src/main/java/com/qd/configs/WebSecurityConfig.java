@@ -5,20 +5,15 @@
 // import org.springframework.context.annotation.Configuration;
 // import org.springframework.context.annotation.EnableAspectJAutoProxy;
 // import org.springframework.security.authentication.AuthenticationManager;
-// import
-// org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-// import
-// org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-// import
-// org.springframework.security.config.annotation.web.builders.HttpSecurity;
-// import
-// org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+// import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+// import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+// import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+// import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 // import org.springframework.security.config.http.SessionCreationPolicy;
 // import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 // import org.springframework.security.crypto.password.PasswordEncoder;
 // import org.springframework.security.web.SecurityFilterChain;
-// import
-// org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+// import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 // import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 // @Configuration
@@ -26,84 +21,64 @@
 // @EnableMethodSecurity
 // @EnableAspectJAutoProxy ///Quét @PreAuthorize và Custom Annotation
 // public class WebSecurityConfig {
-// @Autowired
-// private JwtAuthenticationFilter jwtAuthenticationFilter;
+//     @Autowired
+//     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-// @Bean
-// public AuthenticationManager
-// authenticationManager(AuthenticationConfiguration authConfig) throws
-// Exception {
-// return authConfig.getAuthenticationManager();
-// }
-// @Bean
-// public SecurityFilterChain securityFilterChain(HttpSecurity http) throws
-// Exception {
-// // http.cors(cors -> cors.disable())
-// // .csrf(csrf -> csrf.disable())
-// // .sessionManagement(session ->
-// session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//     @Bean
+//     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+//         return authConfig.getAuthenticationManager();
+//     }
+//     @Bean
+//     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//         // http.cors(cors -> cors.disable())
+//         //     .csrf(csrf -> csrf.disable())
+//         //     .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-// // .authorizeHttpRequests(auth -> auth
-// // .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()
-// // );
+//         //     .authorizeHttpRequests(auth -> auth
+//         //         .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()
+//         //     );
 
-// http.cors(cors -> cors.disable())
-// .csrf(csrf -> csrf.disable())
-// .sessionManagement(session ->
-// session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//             http.cors(cors -> cors.disable())
+//             .csrf(csrf -> csrf.disable())
+//             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-// .authorizeHttpRequests(auth -> auth
-// // 1. Nhóm Public (Công khai)
+//             .authorizeHttpRequests(auth -> auth
 
-// .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/api/services/**",
-// "GET")).permitAll()
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/orders/webhook-callback")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/services/cart/**")).permitAll()
-// .requestMatchers(new AntPathRequestMatcher("/api/customer/**",
-// "GET")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/orders/webhook-callback")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
 
-// // 2. Nhóm Admin Site
-// .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
+//                 // .requestMatchers(new AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
-// // 3. Nhóm Đối tác (Provider)
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/provider/**")).hasRole("PROVIDER")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
 
-// // 4. Nhóm Khách hàng (Customer)
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
-// .requestMatchers(new AntPathRequestMatcher("/api/reviews",
-// "POST")).hasRole("CUSTOMER")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/provider/**")).hasRole("PROVIDER")
 
-// // 5. Nhóm Yêu cầu đăng nhập nói chung
-// .requestMatchers(new
-// AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
-// .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
+//                 .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
 
-// // Tất cả các request phát sinh khác đều phải đăng nhập
-// .anyRequest().authenticated()
-// );
-// http.addFilterBefore(jwtAuthenticationFilter,
-// UsernamePasswordAuthenticationFilter.class);
-// return http.build();
-// }
+//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
+//                 .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
 
-// @Bean
-// public PasswordEncoder passwordEncoder() {
-// return new BCryptPasswordEncoder();
-// }
+//                 .anyRequest().authenticated()
+//             );
+//         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+//         return http.build();
+//     }
+
+//     @Bean
+//     public PasswordEncoder passwordEncoder() {
+//         return new BCryptPasswordEncoder();
+//     }
 // }
 
 package com.qd.configs;
@@ -161,17 +136,18 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/**", "OPTIONS")).permitAll()
 
                         // 1. Nhóm Public (Công khai)
-
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/services/**",
-                                "GET"))
-                        .permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/orders/webhook-callback")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
+
+                        // .requestMatchers(new
+                        // AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
                         // 2. Nhóm Admin Site
                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
@@ -183,9 +159,8 @@ public class WebSecurityConfig {
                         // 4. Nhóm Khách hàng (Customer)
                         .requestMatchers(new AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
-                        .requestMatchers(new AntPathRequestMatcher("/api/reviews",
-                                "POST"))
-                        .hasRole("CUSTOMER")
+                        .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
+                        .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
 
                         // 5. Nhóm Yêu cầu đăng nhập nói chung
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
@@ -194,8 +169,7 @@ public class WebSecurityConfig {
                         // Tất cả các request phát sinh khác đều phải đăng nhập
                         .anyRequest().authenticated());
 
-        http.addFilterBefore(jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

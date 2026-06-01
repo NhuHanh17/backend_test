@@ -69,7 +69,7 @@ public class CustomerRepositoryImpl implements CustomerRepository {
         q.orderBy(b.desc(root.get("createdAt"))); 
         Query<Services> query = session.createQuery(q);
 
-        String pageSizeStr = this.env.getProperty("services.page_size", "16"); 
+        String pageSizeStr = this.env.getProperty("services.page_size", "20"); 
         int pageSize = Integer.parseInt(pageSizeStr);
         int page = 1;
         if (params != null && params.containsKey("page")) {

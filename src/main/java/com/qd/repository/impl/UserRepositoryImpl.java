@@ -38,17 +38,18 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Users findByUsername(String username) {
-//        Session session = this.factory.getObject().getCurrentSession();    
-//        CriteriaBuilder b = session.getCriteriaBuilder();      
-//        CriteriaQuery<Users> q = b.createQuery(Users.class);
-//        Root<Users> root = q.from(Users.class);
-//        q.select(root).where(b.equal(root.get("username"), username));
-//        return  session.createQuery(q).uniqueResult();
+
         return getSession()
                 .createNamedQuery("Users.findByUsername", Users.class)
                 .setParameter("username", username)
                 .uniqueResult();
     }
+
+    @Override
+        public Users findById(Long id) {
+            return getSession().get(Users.class, id);
+        }
+    
 
     @Override
     public boolean isExistByUsername(String username) {

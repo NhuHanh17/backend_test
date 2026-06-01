@@ -9,6 +9,8 @@ import com.qd.dto.AuthResponse;
 import com.qd.dto.RegisterRequest;
 import com.qd.dto.UserProfile;
 import com.qd.dto.provider.BaseComprehensiveRequest;
+import com.qd.pojo.Users;
+
 import java.util.Map;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,6 +29,8 @@ public interface UserService {
     AuthResponse approveProvider(Long id);
     AuthResponse rejectProvider(Long id, AdminActionRequest req);
     AuthResponse banProvider(Long id, AdminActionRequest req);
+    Users findByUsername(String username);
+    Users findById(Long id);
     // Map<String, Object> getMyServicesList(String username, java.util.Map<String, String> params);
     // Object getMyServiceDetail(String username, Long id, String typeStr);
     // Long saveComprehensiveServiceInOneGo(String username, BaseComprehensiveRequest req);

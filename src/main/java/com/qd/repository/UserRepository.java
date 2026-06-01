@@ -21,5 +21,6 @@ public interface UserRepository {
     boolean isEmailExistForOthers(String email, Long currentUserId);
     boolean isPhoneExistForOthers(String phone, Long currentUserId);
     void saveRegister(Users user);
+    public Users findById(Long id);
     
 }

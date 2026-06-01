@@ -6,6 +6,7 @@ package com.qd.service.impl;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.google.cloud.storage.Acl.User;
 import com.qd.dto.AdminActionRequest;
 import com.qd.dto.AdminProviderResponse;
 import com.qd.dto.AuthResponse;
@@ -81,6 +82,18 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private Environment env;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Users findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Users findById(Long id) {
+        return userRepository.findById(id);
+    }
 
     @Override
     @Transactional
