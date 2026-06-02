@@ -29,4 +29,5 @@ public interface ProviderService {
     Map<String, Object> getProviderOrderDetail(String username, Long orderId);
     Providers findProviderByUsername(String username);
 
+    Map<String, Object> getProviderDashboardStats(String username, String periodType);
 }

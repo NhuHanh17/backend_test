@@ -31,8 +31,6 @@ public interface UserService {
     AuthResponse banProvider(Long id, AdminActionRequest req);
     Users findByUsername(String username);
     Users findById(Long id);
-    // Map<String, Object> getMyServicesList(String username, java.util.Map<String, String> params);
-    // Object getMyServiceDetail(String username, Long id, String typeStr);
-    // Long saveComprehensiveServiceInOneGo(String username, BaseComprehensiveRequest req);
+   
 
 }

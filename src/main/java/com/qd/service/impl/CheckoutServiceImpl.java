@@ -9,17 +9,14 @@ import com.qd.dto.customer.CheckoutRequest;
 import com.qd.enums.BookingStatus;
 import com.qd.enums.ItemStatus;
 import com.qd.enums.PaymentStatus;
-import com.qd.pattern.FreePayment;
-import com.qd.pattern.MomoPayment;
 import com.qd.pattern.PaymentStrategy;
-import com.qd.pattern.PaypalPayment;
+import com.qd.pattern.PaymentStrategyFactory;
 import com.qd.pojo.CartItems;
 import com.qd.pojo.OrderDetails;
 import com.qd.pojo.Orders;
 import com.qd.pojo.PaymentMethods;
 import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
-import com.qd.pojo.Services;
 import com.qd.pojo.Users;
 import com.qd.repository.CheckoutRepository;
 import com.qd.service.CheckoutService;
@@ -96,20 +93,19 @@ public class CheckoutServiceImpl implements CheckoutService {
             BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
         }
-   PaymentMethods paymentMethod = null;
+   
+        PaymentMethods paymentMethod = null;
         boolean isFree = totalAmount.compareTo(BigDecimal.ZERO) == 0;
 
         if (isFree) {
             paymentMethod = checkoutRepository.findPaymentMethodById(6L);
         } else {
-            if (req.getPaymentMethodId() == null) {
-                throw new RuntimeException("Đơn hàng có phí bắt buộc chọn Phương thức thanh toán!");
-            }
+            if (req.getPaymentMethodId() == null) throw new RuntimeException("Đơn hàng có phí bắt buộc chọn Phương thức thanh toán!");
             paymentMethod = checkoutRepository.findPaymentMethodById(req.getPaymentMethodId());
-            if (paymentMethod == null)
-                throw new RuntimeException("Hãy chọn phương thức thanh toán hợp lệ!");
+            if (paymentMethod == null) throw new RuntimeException("Hãy chọn phương thức thanh toán hợp lệ!");
         }
-    Orders order = new Orders();
+
+        Orders order = new Orders();
         order.setUserId(buyer);
         order.setProviderId(orderProvider);
         order.setTotalAmount(totalAmount);
@@ -145,20 +141,9 @@ public class CheckoutServiceImpl implements CheckoutService {
                 checkoutRepository.deleteCartItem(cartItem);
             }
         }
-        PaymentStrategy strategy;
-        if (isFree) {
-            strategy = new FreePayment(); 
-        } else {
-            String methodName = paymentMethod.getMethodName().toUpperCase();
-            if (methodName.contains("MOMO")) {
-                strategy = new MomoPayment();
-            } else if (methodName.contains("PAYPAL")) {
-                strategy = new PaypalPayment();
-            } else 
-                throw new RuntimeException("Chưa tích hợp phương thức thanh toán này!");
-        }
-
+        PaymentStrategy strategy=PaymentStrategyFactory.getStrategy(isFree, paymentMethod);
         Map<String, Object> strategyResult = strategy.processPayment(order);
+
         Map<String, Object> finalResult = new HashMap<>(strategyResult);
         finalResult.put("orderId", order.getId());
         finalResult.put("totalAmount", order.getTotalAmount());

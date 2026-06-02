@@ -69,4 +69,7 @@ public interface ProviderRepository {
     Long countOrdersByProvider(Long providerId, Map<String, String> params);
     Orders getOrderByIdAndProvider(Long orderId, Long providerId);
     Providers findProviderByUsername(String username);
+
+    List<Object[]> getRevenueByService(Long providerId);
+    List<Object[]> getRevenueByPeriod(Long providerId, String periodType);
 }

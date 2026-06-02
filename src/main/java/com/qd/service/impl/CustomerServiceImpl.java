@@ -1,16 +1,21 @@
 package com.qd.service.impl;
 
 import com.qd.enums.ItemStatus;
+import com.qd.enums.ServiceStatus;
 import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.OrderDetails;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.ServiceImages;
 import com.qd.pojo.Services;
+import com.qd.pojo.Users;
 import com.qd.repository.CustomerRepository;
+import com.qd.repository.FavoriteRepository;
 import com.qd.repository.ProviderRepository;
+import com.qd.repository.UserRepository;
 import com.qd.service.CustomerService;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +37,12 @@ public class CustomerServiceImpl implements CustomerService{
     private ProviderRepository providerRepository;
 
     @Autowired
+    private FavoriteRepository favoriteRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private Environment env;
 
     @Override
@@ -47,7 +58,17 @@ public class CustomerServiceImpl implements CustomerService{
             map.put("serviceType", s.getServiceType().toString());
             map.put("averageRating", s.getAverageRating());
             map.put("reviewCount", s.getReviewCount());
-            
+
+            BigDecimal minPrice = BigDecimal.ZERO;
+            if (s.getSellableItemsSet() != null && !s.getSellableItemsSet().isEmpty()) {
+                minPrice = s.getSellableItemsSet().stream()
+                    .map(SellableItems::getPrice) 
+                    .filter(p -> p != null)
+                    .min(BigDecimal::compareTo) 
+                    .orElse(BigDecimal.ZERO);
+            }
+            map.put("price", minPrice);
+
             String thumbnail = s.getServiceImagesSet().stream()
                 .filter(img -> img.getIsThumbnail() != null && img.getIsThumbnail())
                 .map(ServiceImages::getImageUrl).findFirst().orElse("");
@@ -68,7 +89,7 @@ public class CustomerServiceImpl implements CustomerService{
             return map;
         }).collect(Collectors.toList());
 
-        int pageSize = Integer.parseInt(this.env.getProperty("services.page_size", "10"));
+        int pageSize = Integer.parseInt(this.env.getProperty("services.page_size", "20"));
         int currentPage = (params != null && params.containsKey("page")) ? Integer.parseInt(params.get("page")) : 1;
         Map<String, Object> result = new HashMap<>();
         result.put("content", content);
@@ -81,10 +102,10 @@ public class CustomerServiceImpl implements CustomerService{
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> getServiceMainDetail(Long id) {
+    public Map<String, Object> getServiceMainDetail(Long id, String currentUsername) {
         Services s = providerRepository.getServiceById(id);
-        if (s == null || !com.qd.enums.ServiceStatus.ACTIVATE.equals(s.getStatus())) {
-            throw new RuntimeException("Lỗi: Dịch vụ không tồn tại hoặc chưa được mở bán!");
+        if (s == null || !ServiceStatus.ACTIVATE.equals(s.getStatus())) {
+            throw new RuntimeException(" Dịch vụ không tồn tại hoặc chưa được mở bán!");
         }
 
         Map<String, Object> data = new HashMap<>();
@@ -109,6 +130,13 @@ public class CustomerServiceImpl implements CustomerService{
             tour.put("days", s.getTourDetails().getDurationDays());
             tour.put("nights", s.getTourDetails().getDurationNights());
             data.put("tourDetails", tour);
+        }else if (s.getServiceType() == ServiceType.TRANSPORT && s.getTransportDetails() != null) {
+            Map<String, Object> transport = new HashMap<>();
+            transport.put("brandName", s.getTransportDetails().getBrandName());
+            transport.put("vehicleType", s.getTransportDetails().getVehicleType()); 
+            transport.put("departureLocation", s.getTransportDetails().getDepartureStation());
+            transport.put("arrivalLocation", s.getTransportDetails().getArrivalStation());          
+            data.put("transportDetails", transport);
         }
 
         List<String> album = s.getServiceImagesSet().stream()
@@ -116,6 +144,16 @@ public class CustomerServiceImpl implements CustomerService{
         data.put("albumImages", album);
         data.put("providerCompany", s.getProviderId().getCompanyName());
 
+        boolean isFavorited = false;
+        if (currentUsername != null && !currentUsername.trim().isEmpty()) {
+            Users user = userRepository.findByUsername(currentUsername);
+            if (user != null) {
+                isFavorited = favoriteRepository.isServiceFavorited(user.getId(), s.getId());
+            }
+            data.put("isFavorited", isFavorited);
+        }else {
+            data.put("isFavorited", "null");
+        }
         return data;
     }
 

@@ -23,6 +23,8 @@ import com.qd.dto.provider.UpdateSubItemRequest;
 import com.qd.enums.ItemStatus;
 import com.qd.enums.ServiceStatus;
 import com.qd.enums.ServiceType;
+import com.qd.pattern.ComprehensiveServiceFactory;
+import com.qd.pattern.ComprehensiveServiceStrategy;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
 import com.qd.pojo.HotelRoomItems;
@@ -60,6 +62,9 @@ public class ProviderServiceImpl implements ProviderService {
 
     @Autowired
     private ProviderRepository providerRepository;
+
+    @Autowired
+    private ComprehensiveServiceFactory serviceFactory;
 
     @Autowired
     private LocalSessionFactoryBean factory;
@@ -144,9 +149,7 @@ public class ProviderServiceImpl implements ProviderService {
 
         ServiceStatus status = ServiceStatus.DRAFT;
         boolean isPublishAction = "PUBLISH".equalsIgnoreCase(req.getAction());
-        if (isPublishAction) {
-            status = ServiceStatus.ACTIVATE;
-        }
+        if (isPublishAction)  status = ServiceStatus.ACTIVATE;
 
         Services service = new Services();
         service.setName(req.getName());
@@ -160,10 +163,10 @@ public class ProviderServiceImpl implements ProviderService {
             Set<Categories> categoriesSet = new HashSet<>();
             
             for (Long cateId : req.getCategoryIds()) {
-                Categories cate = providerRepository.getCategoryById(cateId); // Gọi Repo lấy danh mục lên
+                Categories cate = providerRepository.getCategoryById(cateId); 
                 if (cate != null) {
                     if (!cate.getServiceType().equals(type)) {
-                        throw new RuntimeException("Vi phạm logic dữ liệu: Danh mục " + cate.getName() 
+                        throw new RuntimeException(" Danh mục " + cate.getName() 
                                 + " có kiểu: " + cate.getServiceType() 
                                 + " Không trùng khớp với dịch vụ bạn đang khởi tạo: " + type + "!");
                     }
@@ -177,7 +180,6 @@ public class ProviderServiceImpl implements ProviderService {
             }
             service.setCategoriesSet(categoriesSet);
             providerRepository.saveService(service);
-
         }
 
         if (files != null && files.length > 0) {
@@ -186,14 +188,11 @@ public class ProviderServiceImpl implements ProviderService {
                 if (file != null && !file.isEmpty()) {
                     try {
                         Map uploadResult = cloudinary.uploader().upload(
-                                file.getBytes(),
-                                com.cloudinary.utils.ObjectUtils.emptyMap());
+                                file.getBytes(),ObjectUtils.emptyMap());
                         String secureUrl = (String) uploadResult.get("secure_url");
-
                         ServiceImages imgEntity = new ServiceImages();
                         imgEntity.setServiceId(service);
                         imgEntity.setImageUrl(secureUrl);
-
                         if (isFirstImage) {
                             imgEntity.setIsThumbnail(true);
                             isFirstImage = false;
@@ -203,136 +202,14 @@ public class ProviderServiceImpl implements ProviderService {
                         providerRepository.saveServiceImage(imgEntity);
 
                     } catch (java.io.IOException e) {
-                        throw new RuntimeException("Thất bại: Lỗi upload các ảnh lên Cloudinary!");
+                        throw new RuntimeException("Lỗi upload các ảnh lên Cloudinary!");
                     }
                 }
             }
         }
-
-        if (req instanceof TourComprehensiveRequest) {
-            TourComprehensiveRequest tourReq = (TourComprehensiveRequest) req;
-
-            TourDetails tour = new TourDetails();
-            tour.setServiceId(service.getId());
-            tour.setDepartureLocation(tourReq.getDepartureLocation());
-            tour.setDestinationLocation(tourReq.getDestinationLocation());
-            tour.setDurationDays(tourReq.getDurationDays());
-            tour.setDurationNights(tourReq.getDurationNights());
-            tour.setTransportMode(tourReq.getTransportMode());
-            providerRepository.saveTourDetails(tour);
-
-            if (tourReq.getTourSchedules() != null && !tourReq.getTourSchedules().isEmpty()) {
-                for (TourComprehensiveRequest.ScheduleInnerDTO sDto : tourReq.getTourSchedules()) {
-                    TourItemConcs schedule = new TourItemConcs();
-                    schedule.setTourDetailId(tour);
-                    schedule.setDepartureTime(sDto.getDepartureTime());
-                    schedule.setReturnTime(sDto.getReturnTime());
-                    schedule.setMaxParticipants(sDto.getMaxParticipants());
-                    providerRepository.saveTourSchedule(schedule);
-
-                    // if (isPublishAction && sDto.getAvailableSlots() > 0 && sDto.getPrice() != null
-                    //         && sDto.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-                    //     SellableItems sellItem = createUnifiedSellableItem(service, sDto.getPrice(),
-                    //             sDto.getAvailableSlots());
-                    //     sellItem.setTourItemConcId(schedule);
-                    //     providerRepository.saveSellableItem(sellItem);
-                    // }
-
-                    ItemStatus itemStatus = ItemStatus.SUSPENDED; 
-                    if (ServiceStatus.ACTIVATE.equals(status)) {
-                        itemStatus = (sDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK;
-                    }
-
-                    SellableItems sellItem = createUnifiedSellableItemCustom(service, sDto.getPrice(), sDto.getAvailableSlots(), itemStatus);
-                    sellItem.setTourItemConcId(schedule);
-                    providerRepository.saveSellableItem(sellItem);
-                }
-            }
-
-        } else if (req instanceof HotelComprehensiveRequest) {
-            HotelComprehensiveRequest hotelReq = (HotelComprehensiveRequest) req;
-
-            HotelDetails hotel = new HotelDetails();
-            hotel.setServiceId(service.getId());
-            hotel.setStarRating(hotelReq.getStarRating());
-            hotel.setAddress(hotelReq.getAddress());
-            hotel.setCity(hotelReq.getCity());
-            if (hotelReq.getCheckinTime() != null && !hotelReq.getCheckinTime().isEmpty()) {
-                hotel.setCheckinTime(java.sql.Time.valueOf(hotelReq.getCheckinTime()));
-            }
-            if (hotelReq.getCheckoutTime() != null && !hotelReq.getCheckoutTime().isEmpty()) {
-                hotel.setCheckoutTime(java.sql.Time.valueOf(hotelReq.getCheckoutTime()));
-            }
-            hotel.setAmenities(hotelReq.getAmenities());
-            providerRepository.saveHotelDetails(hotel);
-
-            if (hotelReq.getHotelRooms() != null && !hotelReq.getHotelRooms().isEmpty()) {
-                for (HotelComprehensiveRequest.RoomInnerDTO rDto : hotelReq.getHotelRooms()) {
-                    HotelRoomItems room = new HotelRoomItems();
-                    room.setHotelDetailId(hotel);
-                    room.setRoomType(rDto.getRoomType());
-                    room.setCapacity(rDto.getCapacity());
-                    room.setBedType(rDto.getBedType());
-                    room.setRoomSizeM2(rDto.getRoomSizeM2());
-                    room.setRoomAmenities(rDto.getRoomAmenities());
-                    providerRepository.saveHotelRoomItem(room);
-
-                    // if (isPublishAction && rDto.getAvailableSlots() > 0 && rDto.getPrice() != null
-                    //         && rDto.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-                    //     SellableItems sellItem = createUnifiedSellableItem(service, rDto.getPrice(),
-                    //             rDto.getAvailableSlots());
-                    //     sellItem.setHotelRoomItemId(room);
-                    //     providerRepository.saveSellableItem(sellItem);
-                    // }
-                    ItemStatus itemStatus = ItemStatus.SUSPENDED; 
-                    if (ServiceStatus.ACTIVATE.equals(status)) {
-                        itemStatus = (rDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK;
-                    }
-
-                    SellableItems sellItem = createUnifiedSellableItemCustom(service, rDto.getPrice(), rDto.getAvailableSlots(), itemStatus);
-                    sellItem.setHotelRoomItemId(room);
-                    providerRepository.saveSellableItem(sellItem);
-                }
-            }
-
-        } else if (req instanceof TransportComprehensiveRequest) {
-            TransportComprehensiveRequest transReq = (TransportComprehensiveRequest) req;
-            TransportDetails trans = new TransportDetails();
-            trans.setServiceId(service.getId());
-            trans.setBrandName(transReq.getBrandName());
-            trans.setVehicleType(transReq.getVehicleType());
-            trans.setDepartureStation(transReq.getDepartureStation());
-            trans.setArrivalStation(transReq.getArrivalStation());
-            providerRepository.saveTransportDetails(trans);
-
-            if (transReq.getTransportTickets() != null && !transReq.getTransportTickets().isEmpty()) {
-                for (TransportComprehensiveRequest.TicketInnerDTO tDto : transReq.getTransportTickets()) {
-                    TransportTicketItems ticket = new TransportTicketItems();
-                    ticket.setTransportDetailId(trans);
-                    ticket.setDepartureTime(tDto.getDepartureTime());
-                    ticket.setArrivalTime(tDto.getArrivalTime());
-                    ticket.setDurationMinutes(tDto.getDurationMinutes());
-                    ticket.setSeatClass(tDto.getSeatClass());
-                    providerRepository.saveTransportTicketItem(ticket);
-
-                    // if (isPublishAction && tDto.getAvailableSlots() > 0 && tDto.getPrice() != null
-                    //         && tDto.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-                    //     SellableItems sellItem = createUnifiedSellableItem(service, tDto.getPrice(),
-                    //             tDto.getAvailableSlots());
-                    //     sellItem.setTransportTicketItemId(ticket);
-                    //     providerRepository.saveSellableItem(sellItem);
-                    // }
-                    ItemStatus itemStatus = ItemStatus.SUSPENDED;
-                    if (ServiceStatus.ACTIVATE.equals(status)) {
-                        itemStatus = (tDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK;
-                    }
-
-                    SellableItems sellItem = createUnifiedSellableItemCustom(service, tDto.getPrice(), tDto.getAvailableSlots(), itemStatus);
-                    sellItem.setTransportTicketItemId(ticket);
-                    providerRepository.saveSellableItem(sellItem);
-                }
-            }
-        }
+        providerRepository.saveService(service);
+        ComprehensiveServiceStrategy strategy = serviceFactory.getStrategy(type);
+        strategy.saveDetails(service, req);
         return service.getId();
     }
     
@@ -350,88 +227,10 @@ public class ProviderServiceImpl implements ProviderService {
     @Transactional
     public void addSubItemCustom(String username, Long serviceId, String serviceTypeStr, BaseComprehensiveRequest req) {
         Services service = providerRepository.getServiceById(serviceId);
-        if (service == null) throw new RuntimeException("Lỗi: Dịch vụ gốc không tồn tại!");
+        if (service == null) throw new RuntimeException("Dịch vụ gốc không tồn tại!");
 
         ServiceType type = ServiceType.valueOf(serviceTypeStr.toUpperCase());
-        SellableItems sellItem = new SellableItems();
-        sellItem.setServiceId(service);
-        sellItem.setCreatedAt(new Date());
-
-        ItemStatus targetStatus = ItemStatus.SUSPENDED;
-        
-        if (ServiceStatus.ACTIVATE.equals(service.getStatus())) {
-            targetStatus = ItemStatus.AVAILABLE; 
-        }
-        sellItem.setItemStatus(targetStatus);
-
-        if (type == ServiceType.TOUR && req instanceof TourComprehensiveRequest) {
-            TourComprehensiveRequest tourReq = (TourComprehensiveRequest) req;
-            if (tourReq.getTourSchedules() != null && !tourReq.getTourSchedules().isEmpty()) {
-                TourComprehensiveRequest.ScheduleInnerDTO sDto = tourReq.getTourSchedules().get(0);
-                TourItemConcs schedule = new TourItemConcs();
-                schedule.setTourDetailId(service.getTourDetails());
-                schedule.setDepartureTime(sDto.getDepartureTime());
-                schedule.setReturnTime(sDto.getReturnTime());
-                schedule.setMaxParticipants(sDto.getMaxParticipants());
-                providerRepository.saveTourSchedule(schedule);
-                
-                sellItem.setPrice(sDto.getPrice());
-                sellItem.setAvailableSlots(sDto.getAvailableSlots());
-                sellItem.setTourItemConcId(schedule);
-                
-                if (ServiceStatus.ACTIVATE.equals(service.getStatus())) {
-                    sellItem.setItemStatus((sDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                } else {
-                    sellItem.setItemStatus(ItemStatus.SUSPENDED);
-                }
-            }
-        } else if (type == ServiceType.HOTEL && req instanceof HotelComprehensiveRequest) {
-            HotelComprehensiveRequest hotelReq = (HotelComprehensiveRequest) req;
-            if (hotelReq.getHotelRooms() != null && !hotelReq.getHotelRooms().isEmpty()) {
-                HotelComprehensiveRequest.RoomInnerDTO rDto = hotelReq.getHotelRooms().get(0);
-                HotelRoomItems room = new HotelRoomItems();
-                room.setHotelDetailId(service.getHotelDetails());
-                room.setRoomType(rDto.getRoomType());
-                room.setCapacity(rDto.getCapacity());
-                room.setBedType(rDto.getBedType());
-                room.setRoomSizeM2(rDto.getRoomSizeM2());
-                room.setRoomAmenities(rDto.getRoomAmenities());
-                providerRepository.saveHotelRoomItem(room);
-                
-                sellItem.setPrice(rDto.getPrice());
-                sellItem.setAvailableSlots(rDto.getAvailableSlots());
-                sellItem.setHotelRoomItemId(room);
-                
-                if (ServiceStatus.ACTIVATE.equals(service.getStatus())) {
-                    sellItem.setItemStatus((rDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                } else {
-                    sellItem.setItemStatus(ItemStatus.SUSPENDED);
-                }
-            }
-        } else if (type == ServiceType.TRANSPORT && req instanceof TransportComprehensiveRequest) {
-            TransportComprehensiveRequest transReq = (TransportComprehensiveRequest) req;
-            if (transReq.getTransportTickets() != null && !transReq.getTransportTickets().isEmpty()) {
-                TransportComprehensiveRequest.TicketInnerDTO tDto = transReq.getTransportTickets().get(0);
-                TransportTicketItems ticket = new TransportTicketItems();
-                ticket.setTransportDetailId(service.getTransportDetails());
-                ticket.setDepartureTime(tDto.getDepartureTime());
-                ticket.setArrivalTime(tDto.getArrivalTime());
-                ticket.setDurationMinutes(tDto.getDurationMinutes());
-                ticket.setSeatClass(tDto.getSeatClass());
-                providerRepository.saveTransportTicketItem(ticket);
-                
-                sellItem.setPrice(tDto.getPrice());
-                sellItem.setAvailableSlots(tDto.getAvailableSlots());
-                sellItem.setTransportTicketItemId(ticket);
-                
-                if (ServiceStatus.ACTIVATE.equals(service.getStatus())) {
-                    sellItem.setItemStatus((tDto.getAvailableSlots() > 0) ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                } else {
-                    sellItem.setItemStatus(ItemStatus.SUSPENDED);
-                }
-            }
-        }
-        providerRepository.saveSellableItem(sellItem);
+        serviceFactory.getStrategy(type).addSubItem(service, req);
     }
 
     @Override
@@ -448,7 +247,7 @@ public class ProviderServiceImpl implements ProviderService {
         }
         if (newStatus == ServiceStatus.DRAFT) {
             if (currentStatus == ServiceStatus.ACTIVATE || currentStatus == ServiceStatus.SUSPENDED) {
-                throw new RuntimeException("Thao tác bị từ chối: Bài viết đã từng công khai, không thể hạ cấp quay xe về làm bản nháp (DRAFT)!");
+                throw new RuntimeException("Thao tác bị từ chối: Bài viết đã từng công khai, không thể quay về làm bản nháp (DRAFT)!");
             }
         }
 
@@ -469,12 +268,11 @@ public class ProviderServiceImpl implements ProviderService {
             if (sellableItemsSet != null && !sellableItemsSet.isEmpty()) {
                 for (SellableItems item : sellableItemsSet) {
                     
-                    // Nếu gói nào trước đó bị Provider chủ động khóathì giữ SUSPENDED
                     if (ItemStatus.SUSPENDED.equals(item.getItemStatus()) || item.getItemStatus() == null) {
                         if (item.getAvailableSlots() > 0) {
-                            item.setItemStatus(ItemStatus.AVAILABLE); // Còn chỗ trống ──► Bật AVAILABLE mở bán!
+                            item.setItemStatus(ItemStatus.AVAILABLE); 
                         } else {
-                            item.setItemStatus(ItemStatus.OUT_OF_STOCK); // Hết sạch chỗ ──► Ép sang OUT_OF_STOCK báo hết hàng!
+                            item.setItemStatus(ItemStatus.OUT_OF_STOCK);
                         }
                     }
                 }
@@ -520,136 +318,10 @@ public class ProviderServiceImpl implements ProviderService {
             service.setCategoriesSet(categoriesSet);
         }
 
-
-        if (type == ServiceType.TOUR && req instanceof TourComprehensiveRequest) {
-            TourComprehensiveRequest tourReq = (TourComprehensiveRequest) req;
-            
-            TourDetails tour = service.getTourDetails();
-            if (tour != null) {
-                tour.setDepartureLocation(tourReq.getDepartureLocation());
-                tour.setDestinationLocation(tourReq.getDestinationLocation());
-                tour.setDurationDays(tourReq.getDurationDays());
-                tour.setDurationNights(tourReq.getDurationNights());
-                tour.setTransportMode(tourReq.getTransportMode());
-                providerRepository.saveTourDetails(tour); 
-            }
-
-            if (tourReq.getTourSchedules() != null && !tourReq.getTourSchedules().isEmpty()) {
-                TourComprehensiveRequest.ScheduleInnerDTO sDto = tourReq.getTourSchedules().get(0);
-                TourItemConcs schedule = null;
-                if (tour != null && tour.getTourItemConcsSet() != null && !tour.getTourItemConcsSet().isEmpty()) {
-                    schedule = tour.getTourItemConcsSet().iterator().next();
-                } else {
-                    schedule = new TourItemConcs();
-                    schedule.setTourDetailId(tour);
-                }
-                // Lấy tập hợp Set đang có dưới RAM để tìm dòng con tương ứng sửa đổi
-                if (tour.getTourItemConcsSet() != null && !tour.getTourItemConcsSet().isEmpty()) {
-                    schedule.setDepartureTime(sDto.getDepartureTime());
-                    schedule.setReturnTime(sDto.getReturnTime());
-                    schedule.setMaxParticipants(sDto.getMaxParticipants());
-                    providerRepository.saveTourSchedule(schedule);
-                }
-                if (service.getSellableItemsSet() == null || service.getSellableItemsSet().isEmpty()) {
-                    SellableItems newSellItem = new SellableItems();
-                    newSellItem.setServiceId(service);
-                    newSellItem.setTourItemConcId(schedule);
-                    newSellItem.setCreatedAt(new Date());
-                    if (service.getSellableItemsSet() == null) service.setSellableItemsSet(new HashSet<>());
-                    service.getSellableItemsSet().add(newSellItem);
-                }
-            }
-        } 
-        else if (type == ServiceType.HOTEL && req instanceof HotelComprehensiveRequest) {
-            HotelComprehensiveRequest hotelReq = (HotelComprehensiveRequest) req;
-            
-            HotelDetails hotel = service.getHotelDetails();
-            if (hotel != null) {
-                hotel.setStarRating(hotelReq.getStarRating());
-                hotel.setAddress(hotelReq.getAddress());
-                hotel.setCity(hotelReq.getCity());
-                if (hotelReq.getCheckinTime() != null && !hotelReq.getCheckinTime().isEmpty()) 
-                    hotel.setCheckinTime(java.sql.Time.valueOf(hotelReq.getCheckinTime()));
-                if (hotelReq.getCheckoutTime() != null && !hotelReq.getCheckoutTime().isEmpty()) 
-                    hotel.setCheckoutTime(java.sql.Time.valueOf(hotelReq.getCheckoutTime()));
-                hotel.setAmenities(hotelReq.getAmenities());
-                providerRepository.saveHotelDetails(hotel);
-            }
-
-            if (hotelReq.getHotelRooms() != null && !hotelReq.getHotelRooms().isEmpty()) {
-                HotelComprehensiveRequest.RoomInnerDTO rDto = hotelReq.getHotelRooms().get(0);
-                if (hotel.getHotelRoomItemsSet() != null && !hotel.getHotelRoomItemsSet().isEmpty()) {
-                    HotelRoomItems room = null;      
-                    if (hotel != null && hotel.getHotelRoomItemsSet() != null && !hotel.getHotelRoomItemsSet().isEmpty()) {
-                    room = hotel.getHotelRoomItemsSet().iterator().next();
-                } else {
-                    room = new HotelRoomItems();
-                    room.setHotelDetailId(hotel);
-                }
-
-                    room.setRoomType(rDto.getRoomType());
-                    room.setCapacity(rDto.getCapacity());
-                    room.setBedType(rDto.getBedType());
-                    room.setRoomSizeM2(rDto.getRoomSizeM2());
-                    room.setRoomAmenities(rDto.getRoomAmenities());
-                    providerRepository.saveHotelRoomItem(room);
-
-                    if (service.getSellableItemsSet() == null || service.getSellableItemsSet().isEmpty()) {
-                    SellableItems newSellItem = new SellableItems();
-                    newSellItem.setServiceId(service);
-                    newSellItem.setHotelRoomItemId(room);
-                    newSellItem.setCreatedAt(new Date());
-                    if (service.getSellableItemsSet() == null) service.setSellableItemsSet(new HashSet<>());
-                    service.getSellableItemsSet().add(newSellItem);
-                }
-                }
-            }
-        } 
-        else if (type == ServiceType.TRANSPORT && req instanceof TransportComprehensiveRequest) {
-            TransportComprehensiveRequest transReq = (TransportComprehensiveRequest) req;
-            
-            TransportDetails trans = service.getTransportDetails();
-            if (trans != null) {
-                trans.setBrandName(transReq.getBrandName());
-                trans.setVehicleType(transReq.getVehicleType());
-                trans.setDepartureStation(transReq.getDepartureStation());
-                trans.setArrivalStation(transReq.getArrivalStation());
-                providerRepository.saveTransportDetails(trans);
-            }
-
-            if (transReq.getTransportTickets() != null && !transReq.getTransportTickets().isEmpty()) {
-                TransportComprehensiveRequest.TicketInnerDTO tDto = transReq.getTransportTickets().get(0);
-                if (trans.getTransportTicketItemsSet() != null && !trans.getTransportTicketItemsSet().isEmpty()) {
-                    TransportTicketItems ticket = null;
-                    if (trans != null && trans.getTransportTicketItemsSet() != null && !trans.getTransportTicketItemsSet().isEmpty()) {
-                    ticket = trans.getTransportTicketItemsSet().iterator().next();
-                } else {
-                    ticket = new TransportTicketItems();
-                    ticket.setTransportDetailId(trans);
-                }
-
-                    ticket.setDepartureTime(tDto.getDepartureTime());
-                    ticket.setArrivalTime(tDto.getArrivalTime());
-                    ticket.setDurationMinutes(tDto.getDurationMinutes());
-                    ticket.setSeatClass(tDto.getSeatClass());
-                    providerRepository.saveTransportTicketItem(ticket);
-
-                    if (service.getSellableItemsSet() == null || service.getSellableItemsSet().isEmpty()) {
-                    SellableItems newSellItem = new SellableItems();
-                    newSellItem.setServiceId(service);
-                    newSellItem.setTransportTicketItemId(ticket);
-                    newSellItem.setCreatedAt(new Date());
-                    if (service.getSellableItemsSet() == null) service.setSellableItemsSet(new HashSet<>());
-                    service.getSellableItemsSet().add(newSellItem);
-                }
-                }
-            }
-        }
-
+        serviceFactory.getStrategy(type).updateDetails(service, req);
         Set<SellableItems> sellableItemsSet = service.getSellableItemsSet();
         if (sellableItemsSet != null && !sellableItemsSet.isEmpty()) {
             for (SellableItems item : sellableItemsSet) {
-                
                 if (type == ServiceType.TOUR && req instanceof TourComprehensiveRequest) {
                     TourComprehensiveRequest.ScheduleInnerDTO sDto = ((TourComprehensiveRequest) req).getTourSchedules().get(0);
                     item.setPrice(sDto.getPrice());
@@ -693,8 +365,6 @@ public class ProviderServiceImpl implements ProviderService {
                         if (url.contains("cloudinary.com")) {
                             String fileNameWithExt = url.substring(url.lastIndexOf("/") + 1);
                             String publicId = fileNameWithExt.substring(0, fileNameWithExt.lastIndexOf("."));
-                            
-                            // Bắn lệnh hủy file trên Cloudinary
                             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
                         }
                     } catch (Exception e) {
@@ -722,8 +392,7 @@ public class ProviderServiceImpl implements ProviderService {
             for (MultipartFile file : newFiles) {
                 if (file != null && !file.isEmpty()) {
                     try {
-                        Map uploadResult = cloudinary.uploader().upload(
-                                file.getBytes(),ObjectUtils.emptyMap());
+                        Map uploadResult = cloudinary.uploader().upload(file.getBytes(),ObjectUtils.emptyMap());
                         String secureUrl = (String) uploadResult.get("secure_url");
 
                         ServiceImages newImg = new ServiceImages();
@@ -752,10 +421,9 @@ public class ProviderServiceImpl implements ProviderService {
                 ServiceImages rescueImg = aliveImages.iterator().next();
                 rescueImg.setIsThumbnail(true);
                 providerRepository.saveServiceImage(rescueImg);
+            }
         }
-    }
-
-                     providerRepository.updateService(service); 
+        providerRepository.updateService(service); 
     }
 
 
@@ -773,7 +441,6 @@ public class ProviderServiceImpl implements ProviderService {
         String targetField = "TOUR".equalsIgnoreCase(serviceTypeStr) ? "tourItemConcId" : 
                              "HOTEL".equalsIgnoreCase(serviceTypeStr) ? "hotelRoomItemId" : "transportTicketItemId";
 
-        // Trạng thái sellable về SUSPENDED để ẩn 
         providerRepository.updateSingleSellableStatus(serviceId, targetField, subItemId, ItemStatus.SUSPENDED);
     }
 
@@ -785,96 +452,7 @@ public class ProviderServiceImpl implements ProviderService {
     ServiceType type =ServiceType.valueOf(serviceTypeStr.toUpperCase());
     Services service =providerRepository.getServiceById(serviceId);
 
-    switch (type) {
-        case HOTEL -> {
-
-            HotelRoomItems room =providerRepository.getRoomById(subItemId);
-
-           if (room == null) {
-                    throw new RuntimeException("Room không tồn tại!");
-                }
-            if (!room.getHotelDetailId().getServiceId().equals(service.getId())) {
-                    throw new RuntimeException("Vi phạm bảo mật: Room không thuộc về service này!");
-                }
-            if (req.getRoomType() != null) room.setRoomType(req.getRoomType());
-                if (req.getCapacity() != null) room.setCapacity(req.getCapacity());
-                if (req.getBedType() != null) room.setBedType(req.getBedType());
-                if (req.getRoomSizeM2() != null) room.setRoomSizeM2(req.getRoomSizeM2());
-                if (req.getRoomAmenities() != null) room.setRoomAmenities(req.getRoomAmenities());
-
-            providerRepository.saveHotelRoomItem(room);
-
-            SellableItems item =room.getSellableItems();
-        
-            if (item != null) {
-                    if (req.getPrice() != null) item.setPrice(req.getPrice());
-                    if (req.getAvailableSlots() != null) {
-                        item.setAvailableSlots(req.getAvailableSlots());
-                        // Nhìn kho slots mới cập nhật để bẻ lái trạng thái
-                        item.setItemStatus(req.getAvailableSlots() > 0 ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                    }
-                    providerRepository.saveSellableItem(item);
-                }
-        }
-
-        case TOUR -> {
-
-            TourItemConcs schedule =providerRepository.getTourScheduleById(subItemId);
-
-            if (schedule == null) {
-                throw new RuntimeException("Schedule không tồn tại");
-            }
-
-            if (!schedule.getTourDetailId().getServiceId().equals(service.getId())) {
-
-                throw new RuntimeException("Schedule không thuộc service này");
-            }
-
-            if (req.getDepartureTime() != null) schedule.setDepartureTime(req.getDepartureTime());
-            if (req.getReturnTime() != null) schedule.setReturnTime(req.getReturnTime());
-            if (req.getMaxParticipants() != null) schedule.setMaxParticipants(req.getMaxParticipants());
-
-            providerRepository.saveTourSchedule(schedule);
-            SellableItems item =schedule.getSellableItems();
-        
-            if (item != null) {
-                    if (req.getPrice() != null) item.setPrice(req.getPrice());
-                    if (req.getAvailableSlots() != null) {
-                        item.setAvailableSlots(req.getAvailableSlots());
-                        item.setItemStatus(req.getAvailableSlots() > 0 ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                    }
-                    providerRepository.saveSellableItem(item);
-                }
-        }
-
-        case TRANSPORT -> {
-
-            TransportTicketItems ticket = providerRepository.getTransportTicketById(subItemId);
-                if (ticket == null) {
-                    throw new RuntimeException("Ticket không tồn tại!");
-                }
-                if (!ticket.getTransportDetailId().getServiceId().equals(service.getId())) {
-                    throw new RuntimeException("Vi phạm bảo mật: Ticket không thuộc về service này!");
-                }
-
-            if (req.getDepartureTime() != null) ticket.setDepartureTime(req.getDepartureTime());
-                if (req.getArrivalTime() != null) ticket.setArrivalTime(req.getArrivalTime());
-                if (req.getDurationMinutes() != null) ticket.setDurationMinutes(req.getDurationMinutes());
-                if (req.getSeatClass() != null) ticket.setSeatClass(req.getSeatClass());
-
-            providerRepository.saveTransportTicketItem(ticket);
-
-            SellableItems item = ticket.getSellableItems();
-                if (item != null) {
-                    if (req.getPrice() != null) item.setPrice(req.getPrice());
-                    if (req.getAvailableSlots() != null) {
-                        item.setAvailableSlots(req.getAvailableSlots());
-                        item.setItemStatus(req.getAvailableSlots() > 0 ? ItemStatus.AVAILABLE : ItemStatus.OUT_OF_STOCK);
-                    }
-                    providerRepository.saveSellableItem(item);
-                }
-        }
-    }
+    serviceFactory.getStrategy(type).updateSubItem(service, subItemId, req);
 }
 
 @Override
@@ -885,7 +463,6 @@ public class ProviderServiceImpl implements ProviderService {
 
         List<Orders> list = providerRepository.getOrdersByProviderPaged(provider.getId(), params);
         Long totalElements = providerRepository.countOrdersByProvider(provider.getId(), params);
-
         List<Map<String, Object>> content = list.stream().map(o -> {
             Map<String, Object> map = new HashMap<>();
             map.put("orderId", o.getId());
@@ -893,7 +470,7 @@ public class ProviderServiceImpl implements ProviderService {
             map.put("paymentStatus", o.getPaymentStatus().toString());
             map.put("createdAt", o.getCreatedAt().getTime());
             map.put("transactionReference", o.getTransactionReference());
-            map.put("paymentMethod", o.getPaymentMethodId().getMethodName()); // Phương thức TT: PAYPAL, MOMO, CASH
+            map.put("paymentMethod", o.getPaymentMethodId().getMethodName()); 
             
             map.put("customerName", o.getUserId().getFullName());
             map.put("customerPhone", o.getUserId().getPhone());
@@ -950,6 +527,15 @@ public class ProviderServiceImpl implements ProviderService {
                 odMap.put("providerNameSnapshot", od.getProviderNameSnapshot());
                 odMap.put("itemDescriptionSnapshot", od.getItemDescriptionSnapshot());
                 
+                Map<String, Object> reviewMap = null;
+                if (od.getReviews() != null) {
+                    reviewMap = new HashMap<>();
+                    reviewMap.put("reviewId", od.getReviews().getId());
+                    reviewMap.put("ratingStar", od.getReviews().getRating()); 
+                    reviewMap.put("commentText", od.getReviews().getComment()); 
+                    reviewMap.put("reviewDate", od.getReviews().getCreatedAt()); 
+                }
+                odMap.put("reviewInfo", reviewMap);
                 detailsList.add(odMap);
             }
         }
@@ -965,18 +551,60 @@ public class ProviderServiceImpl implements ProviderService {
     }
 
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getProviderDashboardStats(String username, String periodType) {
+        Users user = userRepository.findByUsername(username);
+        if (user == null || user.getProviders() == null) {
+            throw new RuntimeException("Lỗi: Đối tác không tồn tại trên hệ thống!");
+        }
+        Long providerId = user.getProviders().getId();
+        List<Object[]> serviceData = providerRepository.getRevenueByService(providerId);
+        List<Map<String, Object>> serviceStats = new ArrayList<>();
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        long totalBookings = 0;
 
+        for (Object[] row : serviceData) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("serviceId", row[0]); 
+            item.put("serviceName", row[1]);
+            item.put("revenue", row[2]);
+            item.put("bookingCount", row[3]);
+            serviceStats.add(item);
+            
+            totalRevenue = totalRevenue.add((BigDecimal) row[2]);
+            totalBookings += (Long) row[3];
+        }
 
+        List<Object[]> periodData = providerRepository.getRevenueByPeriod(providerId, periodType);
+        List<Map<String, Object>> periodStats = new ArrayList<>();
 
+        for (Object[] row : periodData) {
+            Map<String, Object> item = new HashMap<>();
+            if ("month".equalsIgnoreCase(periodType)) {
+                item.put("periodLabel", "Tháng " + row[1] + "/" + row[0]);
+                item.put("revenue", row[2]);
+                item.put("orderCount", row[3]);
+            } else if ("quarter".equalsIgnoreCase(periodType)) {
+                item.put("periodLabel", "Quý " + row[1] + "/" + row[0]);
+                item.put("revenue", row[2]);
+                item.put("orderCount", row[3]);
+            } else {
+                item.put("periodLabel", "Năm " + row[0]);
+                item.put("revenue", row[1]);
+                item.put("orderCount", row[2]);
+            }
+            periodStats.add(item);
+        }
 
+        Map<String, Object> statsResult = new HashMap<>();
+        statsResult.put("providerCompany", user.getProviders().getCompanyName());
+        statsResult.put("summaryTotalRevenue", totalRevenue);
+        statsResult.put("summaryTotalBookings", totalBookings); 
+        statsResult.put("byServiceStats", serviceStats);
+        statsResult.put("byPeriodStats", periodStats);
 
-
-
-
-
-
-
-
-
+        return statsResult;
+    }
 
 }

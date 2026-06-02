@@ -87,10 +87,11 @@ public class CustomerApiController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getServiceMainDetail(@PathVariable("id") Long id) {
+    public ResponseEntity<Map<String, Object>> getServiceMainDetail(@PathVariable("id") Long id,Principal principal) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("data", customerService.getServiceMainDetail(id));
+        String currentUsername = (principal != null) ? principal.getName() : "";
+        response.put("data", customerService.getServiceMainDetail(id, currentUsername));
         return ResponseEntity.ok(response);
     }
 

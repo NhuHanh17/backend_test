@@ -46,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
                         role = "ROLE_" + role;
                     }
 
-                    // Khởi tạo Authentication của Spring Security
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             username, null, Collections.singletonList(new SimpleGrantedAuthority(role)));
 

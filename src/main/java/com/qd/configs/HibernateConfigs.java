@@ -28,7 +28,8 @@ import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
     "com.qd.configs",    
     "com.qd.utils",    
     "com.qd.repository", 
-    "com.qd.service"     
+    "com.qd.service",
+    "com.qd.pattern"
 })
 public class HibernateConfigs {
     @Autowired

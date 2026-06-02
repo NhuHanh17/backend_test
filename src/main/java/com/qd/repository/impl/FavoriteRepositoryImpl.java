@@ -94,4 +94,13 @@ public class FavoriteRepositoryImpl implements FavoriteRepository{
         query.setMaxResults(pageSize);
         return query.getResultList();
     }
+
+    @Override
+    public boolean isServiceFavorited(long userId, long serviceId) {
+        Session session = this.factory.getObject().getCurrentSession();
+        FavoritesPK pk = new FavoritesPK(userId, serviceId);
+    return session.get(Favorites.class, pk) != null;
+    }
+
+
 }

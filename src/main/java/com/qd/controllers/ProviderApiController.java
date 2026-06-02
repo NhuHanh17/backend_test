@@ -87,8 +87,8 @@ public class ProviderApiController {
         return ResponseEntity.ok(response);
     }
 
-    // POST /{id}/{serviceType} -> Thêm 1 item con (Lỡ cái này truyền activate của
-    // thg cha draf?)
+    // POST /{id}/{serviceType} -> Thêm 1 item con 
+
     @PostMapping("/{id}/{serviceType}")
     @CheckServiceOwnership(paramName = "id")
     public ResponseEntity<Map<String, Object>> addSubItem(
@@ -124,8 +124,7 @@ public class ProviderApiController {
                 Map.of("success", true, "message", "Đã nạp thêm phân loại con lẻ mới vào bài đăng gốc thành công!"));
     }
 
-    // PATCH /{id}/{serviceType}/{subItemId} -> Thay đổi trạng thái SUSPENDED của
-    // item con (tạm dừng mở bán)
+    // PATCH /{id}/{serviceType}/{subItemId} -> Thay đổi trạng thái SUSPENDED 
     @DeleteMapping("/{id}/{serviceType}/{subItemId}")
     @CheckServiceOwnership(paramName = "id")
     public ResponseEntity<Map<String, Object>> deleteSubItem(
@@ -147,7 +146,6 @@ public class ProviderApiController {
                 "Đã tạm dừng mở bán và xóa mềm phân loại con (SUSPENDED) thành công!"));
     }
 
-    //update item con: có thể update giá, slots, trạng thái (AVAILABLE, OUT_OF_STOCK, SUSPENDED)
     @PutMapping("/{serviceId}/{serviceType}/{subItemId}")
     @CheckServiceOwnership(paramName = "serviceId")
     public ResponseEntity<?> updateSubItem(
@@ -171,7 +169,6 @@ public class ProviderApiController {
                         "message", "Cập nhật item thành công!"));
     }
 
-    // Tạo mới dịch vụ tổng thể kèm ảnh đại diện, trả về ID bài viết mới
     @PostMapping(consumes = { "multipart/form-data" })
     public ResponseEntity<Map<String, Object>> saveComprehensiveService(
             Principal principal, @RequestParam("data") String dataJson,
@@ -237,7 +234,6 @@ public class ProviderApiController {
         return ResponseEntity.ok(response);
     }
 
-    // LƯU CẬP NHẬT, ÉP BUỘC ACTIVATE
     @PutMapping("/{id}")
     @CheckServiceOwnership(paramName = "id")
     public ResponseEntity<Map<String, Object>> updateService(
@@ -282,6 +278,18 @@ public class ProviderApiController {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", providerService.getProviderOrderDetail(principal.getName(), orderId));
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getProviderStats(
+            Principal principal, 
+            @RequestParam(value = "period", defaultValue = "month") String period) {
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", providerService.getProviderDashboardStats(principal.getName(), period));
         
         return ResponseEntity.ok(response);
     }

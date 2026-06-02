@@ -19,4 +19,5 @@ public interface FavoriteRepository {
     public void saveFavorite(Favorites favorite);
     public void deleteFavorite(Favorites favorite);
     public List<Favorites> getFavoriteServicesByUserId(long userId, Map<String, String> params);
+    boolean isServiceFavorited(long userId, long serviceId);
 }

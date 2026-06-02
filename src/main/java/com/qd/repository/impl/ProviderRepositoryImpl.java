@@ -11,6 +11,7 @@ import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
 import com.qd.pojo.HotelDetails;
 import com.qd.pojo.HotelRoomItems;
+import com.qd.pojo.OrderDetails;
 import com.qd.pojo.Orders;
 import com.qd.pojo.Providers;
 import com.qd.pojo.SellableItems;
@@ -25,12 +26,16 @@ import com.qd.repository.ProviderRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.CriteriaUpdate;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Selection;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -130,10 +135,9 @@ public class ProviderRepositoryImpl implements ProviderRepository {
             int pageSize = this.env.getProperty("providers.page_size", Integer.class, 20);
             int page = Integer.parseInt(params.getOrDefault("page", "1"));
 
-            // Công thức Offset, page 1 lấy từ dòng 0, page 2 từ 20
             int start = (page - 1) * pageSize;
-            query.setMaxResults(pageSize); // GánLIMIT cho MySQL
-            query.setFirstResult(start); // Gán OFFSET
+            query.setMaxResults(pageSize); 
+            query.setFirstResult(start); 
         }
 
         return query.getResultList();
@@ -187,7 +191,7 @@ public class ProviderRepositoryImpl implements ProviderRepository {
         try {
             return query.getSingleResult();
         } catch (Exception e) {
-            return null; // Không tìm thấy đối tác với ID này
+            return null; 
         }
     }
 
@@ -209,12 +213,6 @@ public class ProviderRepositoryImpl implements ProviderRepository {
 
         List<Predicate> predicates = new ArrayList<>();
         predicates.add(b.equal(root.get("providerId").get("id"), providerId));
-
-        // try {
-        //     predicates.add(b.notEqual(root.get("status"), ServiceStatus.valueOf("DELETED")));
-        // } catch (IllegalArgumentException e) {
-        //         // Nếu không có trạng thái DELETED trong enum, bỏ qua điều kiện này
-        // }
 
         if (params != null && params.get("serviceType") != null) {
             String typeStr = params.get("serviceType").toUpperCase();
@@ -531,7 +529,8 @@ public class ProviderRepositoryImpl implements ProviderRepository {
         Root<Orders> root = q.from(Orders.class);
         root.fetch("userId", JoinType.INNER);
         root.fetch("paymentMethodId", JoinType.INNER);
-        root.fetch("orderDetailsSet", JoinType.LEFT);
+        Fetch<Orders, OrderDetails> fetchDetails = root.fetch("orderDetailsSet", JoinType.LEFT);
+        fetchDetails.fetch("reviews", JoinType.LEFT);
 
         q.select(root).where(
             b.equal(root.get("id"), orderId),
@@ -562,9 +561,73 @@ public class ProviderRepositoryImpl implements ProviderRepository {
             var query = session.createQuery(q);
             return query.uniqueResult();
         } catch (Exception e) {
-            System.err.println("Lỗi khi tìm Provider theo username: " + e.getMessage());
+            System.err.println("Không tìm thấy Provider theo username: " + e.getMessage());
             return null;
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Object[]> getRevenueByService(Long providerId) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Object[]> q = b.createQuery(Object[].class); 
+        Root<OrderDetails> root = q.from(OrderDetails.class);
+        
+        Join<OrderDetails, Orders> joinOrder = root.join("orderId", JoinType.INNER);
+        Join<OrderDetails, SellableItems> joinSellable = root.join("itemId", JoinType.INNER);
+        Expression<BigDecimal> rowRevenue = b.prod(root.get("price"), root.get("quantity"));
+        Predicate filterProvider = b.equal(joinOrder.get("providerId").get("id"), providerId);
+        Predicate filterStatus = b.equal(joinOrder.get("paymentStatus"), com.qd.enums.PaymentStatus.PAY);
+
+        q.multiselect(
+            joinSellable.get("serviceId").get("id"), 
+            root.get("serviceNameSnapshot"),        
+            b.sum(rowRevenue),                      
+            b.countDistinct(joinOrder.get("id"))
+        );
+        q.where(b.and(filterProvider, filterStatus));
+        q.groupBy(joinSellable.get("serviceId").get("id"), root.get("serviceNameSnapshot")); 
+        return session.createQuery(q).getResultList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Object[]> getRevenueByPeriod(Long providerId, String periodType) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Object[]> q = b.createQuery(Object[].class);
+        Root<Orders> root = q.from(Orders.class);
+
+        Predicate filterProvider = b.equal(root.get("providerId").get("id"), providerId);
+        Predicate filterStatus = b.equal(root.get("paymentStatus"), PaymentStatus.PAY);
+
+        Expression<Integer> yearExpr = b.function("YEAR", Integer.class, root.get("createdAt"));
+        List<Expression<?>> groupExpressions = new ArrayList<>();
+        List<Selection<?>> selectFields = new ArrayList<>();
+        groupExpressions.add(yearExpr);
+        selectFields.add(yearExpr);
+
+        if ("month".equalsIgnoreCase(periodType)) {
+            Expression<Integer> monthExpr = b.function("MONTH", Integer.class, root.get("createdAt"));
+            groupExpressions.add(monthExpr);
+            selectFields.add(monthExpr);
+        } else if ("quarter".equalsIgnoreCase(periodType)) {
+            Expression<Integer> quarterExpr = b.function("QUARTER", Integer.class, root.get("createdAt"));
+            groupExpressions.add(quarterExpr);
+            selectFields.add(quarterExpr);
+        }
+        selectFields.add(b.sum(root.get("totalAmount")));
+        selectFields.add(b.count(root.get("id")));
+
+        q.multiselect(selectFields.toArray(new Selection[0]));
+        q.where(b.and(filterProvider, filterStatus));
+        q.groupBy(groupExpressions.toArray(new Expression[0]));
+        List<Order> orderList = new ArrayList<>();
+        groupExpressions.forEach(expr -> orderList.add(b.asc(expr)));
+        q.orderBy(orderList);
+
+        return session.createQuery(q).getResultList();
     }
 
 
