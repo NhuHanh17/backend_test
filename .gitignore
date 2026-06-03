@@ -3,3 +3,4 @@
 target
 nbproject
 *.iml
+src/main/resources/travelvista-firebase.json
