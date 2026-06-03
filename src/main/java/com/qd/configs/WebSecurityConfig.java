@@ -139,8 +139,8 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
 
-                         .requestMatchers(new
-                         AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
+//                         .requestMatchers(new
+//                         AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                         .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
