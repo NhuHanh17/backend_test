@@ -14,6 +14,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NamedQueries;
 import jakarta.persistence.NamedQuery;
@@ -113,6 +114,10 @@ public class Users implements Serializable {
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "userId",fetch = FetchType.EAGER)
     @JsonIgnore
     private Providers providers;
+    @Lob
+    @Size(max = 65535)
+    @Column(name = "current_token")
+    private String currentToken;
 
     public Users() {
     }
@@ -281,6 +286,19 @@ public class Users implements Serializable {
         int hash = 0;
         hash += (id != null ? id.hashCode() : 0);
         return hash;
+    }
+    /**
+     * @return the currentToken
+     */
+    public String getCurrentToken() {
+        return currentToken;
+    }
+
+    /**
+     * @param currentToken the currentToken to set
+     */
+    public void setCurrentToken(String currentToken ) {
+        this.currentToken = currentToken;
     }
 
     @Override

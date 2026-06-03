@@ -6,12 +6,18 @@ package com.qd.repository.impl;
 
 import com.qd.repository.UserRepository;
 import com.qd.pojo.Categories;
+import com.qd.pojo.Providers;
 import com.qd.pojo.Roles;
 import com.qd.pojo.Users;
 import com.qd.repository.UserRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
+
+import java.util.List;
+
 import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -108,5 +114,29 @@ public class UserRepositoryImpl implements UserRepository {
                 .setParameter("phone", phone)
                 .uniqueResult();
         return user != null && !user.getId().equals(currentUserId);
+    }
+
+    @Override
+    public void updateUser(Users user) {
+    Session session = this.factory.getObject().getCurrentSession();
+        try {
+            session.merge(user); 
+        } catch (Exception e) {
+            System.err.println("Lỗi khi cập nhật token user: " + e.getMessage());
+            throw e; 
+        }
+    }
+
+    @Override
+    public Users findUserByProviderCompanyName(String companyName) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Users> q = b.createQuery(Users.class);
+        Root<Users> root = q.from(Users.class);
+        Join<Users, Providers> joinProvider = root.join("providers", JoinType.INNER);
+        q.select(root).where(b.equal(joinProvider.get("companyName"), companyName));
+
+        List<Users> results = session.createQuery(q).getResultList();
+        return results.isEmpty() ? null : results.get(0);
     }
 }

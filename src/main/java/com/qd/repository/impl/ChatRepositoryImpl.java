@@ -36,14 +36,13 @@ public class ChatRepositoryImpl implements ChatRepository{
     private LocalSessionFactoryBean factory;
 
     @Override
+    @Transactional
     public Long getOrCreateChatRoom(Users me, Users partner) {
         Session session = this.factory.getObject().getCurrentSession();
         CriteriaBuilder b = session.getCriteriaBuilder();
         
         CriteriaQuery<Long> q = b.createQuery(Long.class);
         Root<ChatRooms> root = q.from(ChatRooms.class);
-        q.select(root.get("roomId"));
-
         q.select(root.get("id"));
 
         Predicate caseA = b.and(b.equal(root.get("userId"), me), b.equal(root.get("providerId"), partner));
@@ -65,6 +64,7 @@ public class ChatRepositoryImpl implements ChatRepository{
         return newRoom.getId();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<ChatRooms> getMyChatRooms(Users me) {
         Session session = this.factory.getObject().getCurrentSession();

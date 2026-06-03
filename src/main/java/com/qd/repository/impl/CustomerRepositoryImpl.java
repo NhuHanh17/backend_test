@@ -3,11 +3,15 @@ package com.qd.repository.impl;
 import com.qd.enums.ServiceStatus;
 import com.qd.enums.ServiceType;
 import com.qd.pojo.Categories;
+import com.qd.pojo.OrderDetails;
+import com.qd.pojo.Orders;
+import com.qd.pojo.PaymentMethods;
 import com.qd.pojo.SellableItems;
 import com.qd.pojo.Services;
 import com.qd.repository.CustomerRepository;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -214,5 +218,84 @@ public class CustomerRepositoryImpl implements CustomerRepository {
 
         q.select(b.countDistinct(root)).where(predicates.toArray(new Predicate[0])); 
         return session.createQuery(q).getSingleResult();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Orders> getCustomerOrdersHistory(String username,Map<String, String> params) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Orders> q = b.createQuery(Orders.class);
+        Root<Orders> root = q.from(Orders.class);
+
+        root.fetch("paymentMethodId", JoinType.INNER);
+        root.fetch("providerId", JoinType.INNER);
+        q.select(root).where(
+            b.equal(root.get("userId").get("username"), username)
+        ).orderBy(b.desc(root.get("createdAt")));
+        
+        Query<Orders> query = session.createQuery(q); 
+        String pageSizeStr = this.env.getProperty("my_orders.page_size", "20"); 
+        int pageSize = Integer.parseInt(pageSizeStr);
+        int page = 1;
+        
+        if (params != null && params.containsKey("page")) {
+            try {
+                page = Integer.parseInt(params.get("page"));
+            } catch (NumberFormatException e) {
+                page = 1; 
+            }
+        }       
+        int start = (page - 1) * pageSize;
+        query.setFirstResult(start);
+        query.setMaxResults(pageSize);      
+        return query.getResultList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long countCustomerOrders(String username) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Long> q = b.createQuery(Long.class);
+        Root<Orders> root = q.from(Orders.class);
+        q.select(b.count(root)).where(
+            b.equal(root.get("userId").get("username"), username)
+        );
+
+        Long total = session.createQuery(q).getSingleResult();
+        return total != null ? total : 0L;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentMethods> getActivePaymentMethods() {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<PaymentMethods> q = b.createQuery(PaymentMethods.class);
+        Root<PaymentMethods> root = q.from(PaymentMethods.class);
+
+        Predicate excludeFreeId = b.notEqual(root.get("id"), 6L);
+        Predicate excludeFreeName = b.notEqual(b.upper(root.get("methodName")), "FREE");
+        q.select(root).where(b.and(excludeFreeId, excludeFreeName));
+
+        return session.createQuery(q).getResultList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Services> getServicesForComparison(List<Long> ids) {
+        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        CriteriaQuery<Services> q = b.createQuery(Services.class);
+        Root<Services> root = q.from(Services.class);
+
+        root.fetch("providerId", JoinType.INNER);
+        root.fetch("sellableItemsSet", JoinType.LEFT);
+        root.fetch("serviceImagesSet", JoinType.LEFT);
+        q.select(root).distinct(true).where(
+            b.and(root.get("id").in(ids),b.equal(root.get("status"),ServiceStatus.ACTIVATE))
+        );
+        return session.createQuery(q).getResultList();
     }
 }

@@ -77,6 +77,23 @@ public class AuthApiController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response); // Ma 401
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout(Authentication authentication) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        
+        if (authentication != null) {
+            userService.logout(authentication.getName());
+            response.put("message", "Đăng xuất tài khoản thành công! Phiên làm việc đã kết thúc.");
+            return ResponseEntity.ok(response);
+        }
+        
+        response.put("success", false);
+        response.put("message", "Yêu cầu không hợp lệ!");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    
     @GetMapping("/profile")
     public UserProfile getProfile(Authentication authentication) {
         return userService.getUserProfile(authentication.getName());

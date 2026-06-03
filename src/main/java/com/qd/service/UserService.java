@@ -31,6 +31,8 @@ public interface UserService {
     AuthResponse banProvider(Long id, AdminActionRequest req);
     Users findByUsername(String username);
     Users findById(Long id);
+    void logout(String username);
+    Users findUserByProviderCompanyName(String companyName);
    
 
 }

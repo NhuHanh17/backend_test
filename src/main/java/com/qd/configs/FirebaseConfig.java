@@ -34,30 +34,4 @@ public class FirebaseConfig {
        }
    }
 
-//   try {
-//            getFirebaseAppInstance();
-//        } catch (Exception e) {
-//            System.err.println("🚨 Cảnh báo khởi tạo Firebase lúc đầu: " + e.getMessage());
-//        }
-//    }
-
-    // public static synchronized FirebaseApp getFirebaseAppInstance() throws Exception {
-    //     if (FirebaseApp.getApps().isEmpty()) {
-    //         InputStream serviceAccount = FirebaseConfig.class.getClassLoader()
-    //                 .getResourceAsStream("travelvista-firebase.json");
-
-    //         if (serviceAccount == null) {
-    //             throw new RuntimeException("Không tìm thấy file travelvista-firebase.json trong tài nguyên resources!");
-    //         }
-
-    //         FirebaseOptions options = FirebaseOptions.builder()
-    //                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-    //                 .setDatabaseUrl("https://tên-dự-án-của-ông-giáo-rtdb.firebaseio.com/") // 🚨 Nhớ thay URL chính chủ xịn vào đây nhen!
-    //                 .build();
-
-    //         System.out.println("🎉 [Firebase Admin SDK] Đang kích nổ đúc ứng dụng [DEFAULT] lên RAM...");
-    //         return FirebaseApp.initializeApp(options);
-    //     }
-    //     return FirebaseApp.getInstance(); // Nếu có rồi thì trả về luôn, ko sợ lỗi trùng lặp Bean
-    // }
 }

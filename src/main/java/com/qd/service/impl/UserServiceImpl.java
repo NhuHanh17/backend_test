@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -215,7 +216,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(String username, String password) {
         Users user = userRepository.findByUsername(username);
 
@@ -229,12 +230,26 @@ public class UserServiceImpl implements UserService {
         }
         String roleName = user.getRoleId().getRoleName();
         String token = jwtProvider.generateToken(user.getUsername(), roleName);
+
+        user.setCurrentToken(token);
+        userRepository.updateUser(user);
         return AuthResponse.builder()
                 .success(true)
                 .message("Đăng nhập Vista Travel thành công!")
                 .token(token)
                 .userDetail(user)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void logout(String username) {
+        Users user = userRepository.findByUsername(username);
+        if (user != null) {
+            user.setCurrentToken(null); 
+            userRepository.updateUser(user);
+        }
+        SecurityContextHolder.clearContext(); 
     }
 
     @Override
@@ -385,8 +400,8 @@ public class UserServiceImpl implements UserService {
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("content", content);
         result.put("totalElements", totalElements);
-        result.put("page", currentPage);          // Trang hiện tại
-        result.put("size", pageSize);             // Số dòng/trang
+        result.put("page", currentPage);         
+        result.put("size", pageSize);
 
         return result;
     }
@@ -459,6 +474,12 @@ public class UserServiceImpl implements UserService {
 
         providerRepository.updateProvider(provider);
         return AuthResponse.builder().success(true).message("Đã khóa tài khoản đối tác này thành công!").build();
+    }
+
+    @Override
+    @Transactional
+    public Users findUserByProviderCompanyName(String companyName) {
+        return userRepository.findUserByProviderCompanyName(companyName);
     }
 
 }

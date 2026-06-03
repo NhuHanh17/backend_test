@@ -199,6 +199,30 @@ public class CustomerApiController {
         }
     }
 
+    @GetMapping("/payment")
+    public ResponseEntity<Map<String, Object>> getPaymentMethods() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", customerService.getPaymentMethodsForCheckout());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/orders")
+    public ResponseEntity<Map<String, Object>> getMyOrdersHistory(Principal principal,@RequestParam Map<String, String> params) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", customerService.getMyOrdersHistory(principal.getName(), params));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/compare")
+    public ResponseEntity<Map<String, Object>> compareServices(@RequestParam("ids") List<Long> ids) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", customerService.compareServices(ids));
+        
+        return ResponseEntity.ok(response);
+    }
 
 
 }

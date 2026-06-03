@@ -58,28 +58,25 @@ public class FirebaseChatAuthController {
     public ResponseEntity<Map<String, Object>> openChatRoom(
             Principal principal, @RequestBody Map<String, Object> body) {
         
-        if (body == null || !body.containsKey("partnerId")) {
-            throw new RuntimeException("Chưa có partnerId trong Request");
+        if (body == null || !body.containsKey("providerName")) {
+            throw new RuntimeException("Thiếu tham số providerName trong Request!");
         }
 
+        String providerName = body.get("providerName").toString();
         Users current = userService.findByUsername(principal.getName());
-        
-        Long partnerId = Long.parseLong(body.get("partnerId").toString());
-        Users partner = userService.findById(partnerId);
+        Users partner = userService.findUserByProviderCompanyName(providerName);
 
-        if (partner == null) {
-            throw new RuntimeException("Người dùng này không tồn tại trên TravelVista!");
-        }
+        if (partner == null) 
+            throw new RuntimeException("Không tìm thấy Nhà cung cấp nào mang tên '" + providerName + "' trên hệ thống!");
         
-        if (current.getId().equals(partner.getId())) {
-            throw new RuntimeException("Không thể tự mở phòng chat với chính mình!");
-        }
+        if (current.getId().equals(partner.getId())) 
+            throw new RuntimeException("Bạn không thể tự mở phòng chat với chính công ty của mình!");
 
         Long roomId = chatService.getOrCreateChatRoom(current, partner);
         return ResponseEntity.ok(Map.of(
             "success", true,
             "roomId", roomId, 
-            "message", "Khởi tạo phòng chat thành công!"
+            "message", "Đã khởi tạo phòng chat với " + providerName
         ));
     }
 

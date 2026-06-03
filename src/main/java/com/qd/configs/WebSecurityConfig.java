@@ -83,7 +83,6 @@
 //     }
 // }
 
-
 package com.qd.configs;
 
 import java.util.List;
@@ -140,8 +139,8 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
 
-                        .requestMatchers(new AntPathRequestMatcher("/api/customer/services/*/reviews", "GET"))
-                        .permitAll()
+                         .requestMatchers(new
+                         AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                         .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
@@ -152,7 +151,7 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
-                        .requestMatchers(new AntPathRequestMatcher("/api/services/orders", "POST")).hasRole("CUSTOMER")
+                        .requestMatchers(new AntPathRequestMatcher("/api/services/orders")).hasRole("CUSTOMER")
 
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
                         .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
