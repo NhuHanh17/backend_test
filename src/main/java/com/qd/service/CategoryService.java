@@ -13,5 +13,5 @@ import java.util.Map;
  * @author ADMIN
  */
 public interface CategoryService {
-    List<Categories> getCates(Map<String, String> params);
+    List<Map<String, Object>> getCates(Map<String, String> params);
 }

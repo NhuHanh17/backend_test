@@ -16,6 +16,7 @@ import org.hibernate.Session;
 import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import static org.springframework.jdbc.core.JdbcOperationsExtensionsKt.query;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,37 +33,40 @@ public class CategoryRepositoryImpl implements CategoryRepository{
     @Autowired
     private Environment env;
     @Override
-    public List<Categories> getCates(Map<String, String> params){
-//        Session session=this.factory.getObject().getCurrentSession();
-//        Query query=session.createQuery("FROM Category", Category.class);
-//        return query.getResultList();
+    public List<Categories> getCates(Map<String, String> params) {
         Session session = this.factory.getObject().getCurrentSession();    
         CriteriaBuilder b = session.getCriteriaBuilder();
         CriteriaQuery<Categories> q = b.createQuery(Categories.class);
-
         Root<Categories> root = q.from(Categories.class); 
         q.select(root); 
+        
         if (params != null && params.containsKey("serviceType") && !params.get("serviceType").trim().isEmpty()) {
             try {
                 ServiceType typeEnum = ServiceType.valueOf(params.get("serviceType").toUpperCase());
                 q.where(b.equal(root.get("serviceType"), typeEnum)); 
             } catch (IllegalArgumentException e) {
-                return List.of(); // Trả về danh sách rỗng nếu serviceType không hợp lệ
+                return List.of(); 
             }
-        }
+        } 
+
         Query<Categories> query = session.createQuery(q);
-        String pageSizeStr = this.env.getProperty("categories.page_size", "20");
+                String pageSizeStr = this.env.getProperty("categories.page_size", "20");
         int pageSize = Integer.parseInt(pageSizeStr);
         
         int page = 1; 
-        if (params != null && params.containsKey("page")) {
-            page = Integer.parseInt(params.get("page"));
+        if (params != null && params.containsKey("page") && !params.get("page").trim().isEmpty()) {
+            try {
+                page = Integer.parseInt(params.get("page"));
+                if (page < 1) page = 1; 
+            } catch (NumberFormatException e) {
+                page = 1; 
+            }
         }
-        
         int start = (page - 1) * pageSize;
-        query.setMaxResults(pageSize);
-        query.setFirstResult(start);
-        
-        return query.getResultList();
+        query.setFirstResult(start); 
+        query.setMaxResults(pageSize); 
+                return query.getResultList();
     }
 }
+
+

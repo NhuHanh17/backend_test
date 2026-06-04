@@ -4,6 +4,7 @@
  */
 package com.qd.service;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,5 +16,4 @@ public interface CartService {
     void addItemToCart(String username, Long sellableItemId, int quantity);
     void updateCartItemQuantity(Long cartItemId, int quantity);
     void removeCartItem(Long cartItemId);
-    // String processCheckout(String username, Map<String, Object> body);
-}
+    Map<String, Object> previewCartItems(List<Long> cartItemIds);}

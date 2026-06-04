@@ -162,4 +162,24 @@ public class CartRepositoryImpl implements CartRepository{
     public Categories getCategoryById(Long id) {
     return this.factory.getObject().getCurrentSession().find(Categories.class,id);    }
     
+    @Override
+    @Transactional(readOnly = true)
+    public List<CartItems> findCartItemsForPreview(List<Long> cartItemIds) {        Session session = this.factory.getObject().getCurrentSession();
+        CriteriaBuilder b = session.getCriteriaBuilder();
+        
+        CriteriaQuery<CartItems> q = b.createQuery(CartItems.class);
+        Root<CartItems> rootCart = q.from(CartItems.class);
+
+        Fetch<CartItems, SellableItems> fetchSellable = rootCart.fetch("itemId", JoinType.INNER);
+        Fetch<SellableItems, Services> fetchService = fetchSellable.fetch("serviceId", JoinType.INNER);
+        fetchService.fetch("providerId", JoinType.INNER);
+        fetchService.fetch("serviceImagesSet", JoinType.LEFT); 
+
+        q.select(rootCart).distinct(true)
+         .where(rootCart.get("id").in(cartItemIds));
+
+        Query<CartItems> query = session.createQuery(q);
+        return query.getResultList();
+    }
+
 }

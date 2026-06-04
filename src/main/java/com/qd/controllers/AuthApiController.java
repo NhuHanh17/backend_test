@@ -71,7 +71,7 @@ public class AuthApiController {
         if (response.isSuccess()) {
 
             String token = jwtProvider.generateToken(loginRequest.getUsername());
-            return ResponseEntity.ok(response); // Tra ma 200 + Token JWT
+            return ResponseEntity.ok(response);
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response); // Ma 401

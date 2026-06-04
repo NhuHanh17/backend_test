@@ -13,9 +13,12 @@ import com.qd.pojo.ServiceImages;
 import com.qd.pojo.Services;
 import com.qd.repository.CartRepository;
 import com.qd.service.CartService;
+import java.util.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -186,66 +189,90 @@ public class CartServiceImpl implements CartService{
 
     }
 
-    
-    // @Override
-    // @Transactional
-    // public String processCheckout(String username, Map<String, Object> body) {
-    //     boolean isFromCart = body.containsKey("isFromCart") && Boolean.parseBoolean(body.get("isFromCart").toString());
-    //     String paymentMethod = body.getOrDefault("paymentMethodCode", "CASH").toString();
-        
-    //     List<CartItems> itemsToBuy = new ArrayList<>();
-    //     Carts cart = cartRepository.findCartByUsername(username);
+    @Override
+    @Transactional(readOnly = true) 
+    public Map<String, Object> previewCartItems(List<Long> cartItemIds) {
+        Map<String, Object> response = new HashMap<>();
+        if (cartItemIds == null || cartItemIds.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "Vui lòng chọn ít nhất 1 sản phẩm từ giỏ hàng!");
+            return response;
+        }
+        List<CartItems> list = cartRepository.findCartItemsForPreview(cartItemIds);
+        if (list.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "Không tìm thấy dữ liệu giỏ hàng hợp lệ!");
+            return response;
+        }
 
-    //     if (isFromCart) {
-    //         if (cart == null) throw new RuntimeException("Không tìm thấy dữ liệu giỏ hàng!");
-    //         Map<String, String> unpaged = new HashMap<>();
-    //         unpaged.put("page", "1");
-    //         itemsToBuy = cartRepository.getCartItemsPaged(cart.getId(), unpaged);
-    //         if (itemsToBuy.isEmpty()) throw new RuntimeException("Giỏ hàng của bạn đang trống rỗng, không có gì để tính tiền!");
-    //     } else {
-    //         Long sellableItemId = Long.parseLong(body.get("sellableItemId").toString());
-    //         int quantity = Integer.parseInt(body.get("quantity").toString());
+        List<Map<String, Object>> validatedItems = new ArrayList<>();
+        Set<Long> providerIds = new HashSet<>();
+        boolean isAllAvailable = true;
+        BigDecimal totalCartPrice = BigDecimal.ZERO;
+        for (CartItems cartItem : list) {
+            Map<String, Object> itemMap = new HashMap<>();
+            SellableItems sellable = cartItem.getItemId();
+            Services service = sellable.getServiceId();
+            Providers provider = service.getProviderId();
 
-    //         SellableItems si = cartRepository.findSellableItemForUpdate(sellableItemId);
-    //         CartItems mockItem = new CartItems();
-    //         mockItem.setItemId(si);
-    //         mockItem.setQuantity(quantity);
-    //         itemsToBuy.add(mockItem);
-    //     }
+            int requestedQty = cartItem.getQuantity();
+            int availableSlots = sellable.getAvailableSlots();
 
-    //     Long targetProviderId = itemsToBuy.get(0).getItemId().getServiceId().getProviderId().getId();
-    //     for (CartItems ci : itemsToBuy) {
-    //         Long currentProviderId = ci.getItemId().getServiceId().getProviderId().getId();
-    //         if (!currentProviderId.equals(targetProviderId)) {
-    //             throw new RuntimeException("Lỗi Checkout nghiêm trọng: Hệ thống TravelVista chỉ cho phép chốt hóa đơn cho các sản phẩm của CÙNG MỘT Nhà cung cấp trên một đơn hàng! Vui lòng dọn dẹp hoặc tách giỏ hàng thành các đơn riêng lẻ!");
-    //         }
-    //     }
+            boolean isAvailable = (requestedQty <= availableSlots) && (sellable.getItemStatus() == ItemStatus.AVAILABLE);
+            if (!isAvailable) {
+                isAllAvailable = false;
+            }
 
-    //     for (CartItems ci : itemsToBuy) {
-    //         SellableItems realStockItem = cartRepository.findSellableItemForUpdate(ci.getItemId().getId());
-    //         if (realStockItem.getAvailableSlots() < ci.getQuantity() || !ItemStatus.AVAILABLE.equals(realStockItem.getItemStatus())) {
-    //             throw new RuntimeException("Thao tác bị hủy: Sản phẩm [" + realStockItem.getServiceId().getName() + "] vừa mới hết chỗ trống đột xuất! Vui lòng tải lại trang.");
-    //         }
+            providerIds.add(provider.getId());
+            BigDecimal itemPrice = sellable.getPrice() != null ? sellable.getPrice() : BigDecimal.ZERO;
+            BigDecimal itemTotalPrice = itemPrice.multiply(BigDecimal.valueOf(requestedQty));
+            totalCartPrice = totalCartPrice.add(itemTotalPrice);
+
+            String thumbnailUrl = "";
+            if (service.getServiceImagesSet() != null) {
+                thumbnailUrl = service.getServiceImagesSet().stream()
+                        .filter(img -> img.getIsThumbnail() != null && img.getIsThumbnail())
+                        .map(ServiceImages::getImageUrl)
+                        .findFirst()
+                        .orElse("");
             
-    //         realStockItem.setAvailableSlots(realStockItem.getAvailableSlots() - ci.getQuantity());
-    //         if (realStockItem.getAvailableSlots() == 0) {
-    //             realStockItem.setItemStatus(ItemStatus.OUT_OF_STOCK); // Treo bảng hết hàng
-    //         }
-    //         cartRepository.updateSellableItem(realStockItem);
-    //     }
+                if (thumbnailUrl.isEmpty() && !service.getServiceImagesSet().isEmpty()) {
+                    thumbnailUrl = service.getServiceImagesSet().iterator().next().getImageUrl();
+                }
+            }
 
-    //     if (isFromCart) {
-    //         for (CartItems ci : itemsToBuy) {
-    //             cartRepository.deleteCartItem(ci);
-    //         }
-    //     }
+            itemMap.put("cartItemId", cartItem.getId());
+            itemMap.put("sellableItemId", sellable.getId());
+            itemMap.put("serviceName", service.getName());
+            itemMap.put("price", itemPrice);
+            itemMap.put("requestedQuantity", requestedQty);
+            itemMap.put("availableSlots", availableSlots);
+            itemMap.put("isAvailable", isAvailable);
+            itemMap.put("thumbnailUrl", thumbnailUrl);
+            itemMap.put("itemTotalPrice", itemTotalPrice);
+            itemMap.put("providerId", provider.getId());
+            itemMap.put("providerName", provider.getCompanyName());
 
-    //     if ("PAYPAL".equalsIgnoreCase(paymentMethod)) {
-    //         return "https://www.paypal.com/checkoutnow?token=EC-TRAVELVISTA" + UUID.randomUUID().toString().substring(0,8);
-    //     } else if ("MOMO".equalsIgnoreCase(paymentMethod)) {
-    //         return "https://momo.vn/payment/qr-gateway/id=" + UUID.randomUUID().toString().substring(0,8);
-    //     }
-        
-    //     return ""; 
-    // }
+            validatedItems.add(itemMap);
+        }
+
+        boolean isSameProvider = (providerIds.size() == 1);
+
+        response.put("success", true);
+        response.put("isAllAvailable", isAllAvailable);   
+        response.put("isSameProvider", isSameProvider);   
+        response.put("totalCartPrice", totalCartPrice);
+        response.put("totalUniqueProviders", providerIds.size());
+        response.put("items", validatedItems);
+
+        if (!isAllAvailable) {
+            response.put("warningMessage", "Có dịch vụ đã hết chỗ hoặc không đủ slot đáp ứng!");
+        } else if (!isSameProvider) {
+            response.put("warningMessage", "Đơn hàng chọn dịch vụ từ nhiều Nhà cung cấp khác nhau!");
+        } else {
+            response.put("message", " Đơn hàng sẵn sàng thanh toán!");
+        }
+        return response;
+    }
+   
 }

@@ -387,9 +387,6 @@ public class UserServiceImpl implements UserService {
         List<Providers> providers = providerRepository.getProvidersByStatus(isApproved, params);
         Long totalElementsObj = providerRepository.countProvidersByStatus(isApproved, params);
         long totalElements = totalElementsObj != null ? totalElementsObj : 0L;
-        // List<Providers> providers = providerRepository.getProvidersByStatus(isApproved, params);
-        //         long totalElements = providerRepository.countProvidersByStatus(isApproved);
-
         int pageSize = this.env.getProperty("providers.page_size", Integer.class, 20);
         int currentPage = (params != null) ? Integer.parseInt(params.getOrDefault("page", "1")) : 1;
 

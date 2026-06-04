@@ -10,5 +10,5 @@ import java.util.Map;
 
 
 public interface CategoryRepository {
-    List<Categories> getCates(Map<String, String> params);
+   List<Categories> getCates(Map<String, String> params);
 }

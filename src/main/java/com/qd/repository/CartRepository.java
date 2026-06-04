@@ -31,4 +31,5 @@ public interface CartRepository {
     void updateSellableItem(SellableItems item);
     void createOrder(com.qd.pojo.Orders order);
     com.qd.pojo.Categories getCategoryById(Long id);
+    List<CartItems> findCartItemsForPreview(List<Long> cartItemIds);
 }

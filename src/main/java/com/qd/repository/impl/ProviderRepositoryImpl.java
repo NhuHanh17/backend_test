@@ -123,7 +123,7 @@ public class ProviderRepositoryImpl implements ProviderRepository {
                 predicates.add(b.isNotNull(root.get("statusReason"))); 
             } else {
                 predicates.add(b.equal(userJoin.get("isActive"), true));
-                predicates.add(b.isNull(root.get("statusReason")));    // REASON == NULL
+                predicates.add(b.isNull(root.get("statusReason")));  
             }
         } else predicates.add(b.equal(userJoin.get("isActive"), true));
         

@@ -19,7 +19,7 @@
 // @Configuration
 // @EnableWebSecurity
 // @EnableMethodSecurity
-// @EnableAspectJAutoProxy ///Quét @PreAuthorize và Custom Annotation
+// @EnableAspectJAutoProxy /// Quét @PreAuthorize và Custom Annotation
 // public class WebSecurityConfig {
 //     @Autowired
 //     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -28,51 +28,46 @@
 //     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
 //         return authConfig.getAuthenticationManager();
 //     }
+
 //     @Bean
 //     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//         // http.cors(cors -> cors.disable())
-//         //     .csrf(csrf -> csrf.disable())
-//         //     .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-//         //     .authorizeHttpRequests(auth -> auth
-//         //         .requestMatchers(new AntPathRequestMatcher("/**")).permitAll()
-//         //     );
+//         http.cors(cors -> cors.disable())
+//                 .csrf(csrf -> csrf.disable())
+//                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-//             http.cors(cors -> cors.disable())
-//             .csrf(csrf -> csrf.disable())
-//             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                 .authorizeHttpRequests(auth -> auth
 
-//             .authorizeHttpRequests(auth -> auth
+//                         .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/orders/webhook-callback")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/customer/categories", "GET")).permitAll()
+//                         // .requestMatchers(new
+//                         // AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
 
-//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/orders/webhook-callback")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/images/**")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
 
-//                 // .requestMatchers(new AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/provider/**")).hasRole("PROVIDER")
 
-//                 .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
-//                 .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/services/orders")).hasRole("CUSTOMER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/services/preview")).hasRole("CUSTOMER")
 
-//                 .requestMatchers(new AntPathRequestMatcher("/api/provider/**")).hasRole("PROVIDER")
+//                         .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
+//                         .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
 
-//                 .requestMatchers(new AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
-//                 .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
-//                 .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
-//                 .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
-//                 .requestMatchers(new AntPathRequestMatcher("/api/services/orders", "POST")).hasRole("CUSTOMER")
-
-//                 .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
-//                 .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
-
-//                 .anyRequest().authenticated()
-//             );
+//                         .anyRequest().authenticated());
 //         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 //         return http.build();
 //     }
@@ -86,6 +81,7 @@
 package com.qd.configs;
 
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -108,26 +104,33 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableAspectJAutoProxy /// Quét @PreAuthorize và Custom Annotation
+@EnableAspectJAutoProxy
 public class WebSecurityConfig {
+
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
+
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
 
+                        // OPTIONS cho preflight
                         .requestMatchers(new AntPathRequestMatcher("/**", "OPTIONS")).permitAll()
 
+                        // Public
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/register")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/**", "GET")).permitAll()
@@ -138,27 +141,32 @@ public class WebSecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/webjars/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/cart/**")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/services/callback", "POST")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/customer/categories", "GET")).permitAll()
 
-//                         .requestMatchers(new
-//                         AntPathRequestMatcher("/api/customer/services/*/reviews", "GET")).permitAll()
-
+                        // Admin
                         .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                         .requestMatchers(new AntPathRequestMatcher("/api/analytics/admin/**")).hasRole("ADMIN")
 
+                        // Provider
                         .requestMatchers(new AntPathRequestMatcher("/api/provider/**")).hasRole("PROVIDER")
 
+                        // Customer
                         .requestMatchers(new AntPathRequestMatcher("/api/cart/**")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/orders/customer/**")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/reviews", "POST")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/customer/**")).hasRole("CUSTOMER")
                         .requestMatchers(new AntPathRequestMatcher("/api/services/orders")).hasRole("CUSTOMER")
+                        .requestMatchers(new AntPathRequestMatcher("/api/services/preview")).hasRole("CUSTOMER")
 
+                        // Authenticated
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/profile/**")).authenticated()
                         .requestMatchers(new AntPathRequestMatcher("/api/chat/**")).authenticated()
 
                         .anyRequest().authenticated());
 
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

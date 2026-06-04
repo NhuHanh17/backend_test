@@ -104,7 +104,6 @@ public class CheckoutServiceImpl implements CheckoutService {
             paymentMethod = checkoutRepository.findPaymentMethodById(req.getPaymentMethodId());
             if (paymentMethod == null) throw new RuntimeException("Hãy chọn phương thức thanh toán hợp lệ!");
         }
-
         Orders order = new Orders();
         order.setUserId(buyer);
         order.setProviderId(orderProvider);
@@ -120,7 +119,6 @@ public class CheckoutServiceImpl implements CheckoutService {
             int newSlots = item.getAvailableSlots() - itemReq.getQuantity();
             item.setAvailableSlots(newSlots);
             if (newSlots == 0)  item.setItemStatus(ItemStatus.OUT_OF_STOCK);
-            
             checkoutRepository.updateSellableItem(item);
             OrderDetails detail = new OrderDetails();
             detail.setOrderId(order);

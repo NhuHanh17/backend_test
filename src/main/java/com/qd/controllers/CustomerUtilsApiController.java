@@ -17,6 +17,7 @@ import com.qd.pojo.Favorites;
 import com.qd.pojo.Reviews;
 import com.qd.pojo.Services;
 import com.qd.pojo.Users;
+import com.qd.service.CategoryService;
 import com.qd.service.FavoriteService;
 import com.qd.service.ReviewService;
 import com.qd.service.UserService;
@@ -36,6 +37,9 @@ public class CustomerUtilsApiController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private CategoryService categoryService;
     
 
 
@@ -111,6 +115,16 @@ public class CustomerUtilsApiController {
         } catch (Exception e) {
             return ResponseEntity.status(400).body(Map.of("success", false, "message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<Map<String, Object>> getAllCategories(@RequestParam Map<String, String> params) {
+        Map<String, Object> response = new HashMap<>();
+        List<Map<String, Object>> data = categoryService.getCates(params);
+        response.put("success", true);
+        response.put("data", data);
+        
+        return ResponseEntity.ok(response);
     }
 
 
